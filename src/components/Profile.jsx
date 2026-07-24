@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Phone, Mail, Building2, Calendar, CreditCard, CheckCircle2, ChevronRight, ExternalLink, Plus, Shield, Lock, Loader2, X, Trash2, Star, Eye, EyeOff } from 'lucide-react';
 import { auth, db } from '../firebase';
 import { updatePassword } from 'firebase/auth';
@@ -13,20 +13,38 @@ const Profile = ({ userData }) => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [showAccountNumber, setShowAccountNumber] = useState(false);
   
-  // Local state for personal data
+  // Local state for personal data and bank details
   const [personalData, setPersonalData] = useState({
     nombre: userData?.nombre || '',
     fechaNacimiento: userData?.fechaNacimiento || '',
-    telefono: userData?.telefono || ''
+    telefono: userData?.telefono || '',
+    banco: userData?.banco || '',
+    tipoCuenta: userData?.tipoCuenta || '',
+    numeroCuenta: userData?.numeroCuenta || ''
   });
+
+  useEffect(() => {
+    if (userData) {
+      setPersonalData({
+        nombre: userData.nombre || '',
+        fechaNacimiento: userData.fechaNacimiento || '',
+        telefono: userData.telefono || '',
+        banco: userData.banco || '',
+        tipoCuenta: userData.tipoCuenta || '',
+        numeroCuenta: userData.numeroCuenta || ''
+      });
+    }
+  }, [userData]);
 
   const handleSaveChanges = async () => {
     setSaveLoading(true);
     try {
-      if (userData?.uid) {
-        const userDocRef = doc(db, 'usuarios', userData.rut); // Using RUT as ID as per previous context
+      if (userData?.rut) {
+        const userDocRef = doc(db, 'usuarios', userData.rut); 
         await updateDoc(userDocRef, personalData);
         alert('Cambios guardados con éxito.');
+      } else {
+        throw new Error('RUT de usuario no identificado.');
       }
     } catch (error) {
       console.error(error);
@@ -80,16 +98,14 @@ const Profile = ({ userData }) => {
             <Shield size={18} />
             Seguridad
           </button>
-          {isAdmin && (
-            <button 
-              onClick={handleSaveChanges}
-              disabled={saveLoading}
-              className="btn-primary"
-            >
-              {saveLoading ? <Loader2 className="animate-spin" size={18} /> : 'Guardar Cambios'}
-              <ChevronRight size={18} />
-            </button>
-          )}
+          <button 
+            onClick={handleSaveChanges}
+            disabled={saveLoading}
+            className="btn-primary"
+          >
+            {saveLoading ? <Loader2 className="animate-spin" size={18} /> : 'Guardar Cambios'}
+            <ChevronRight size={18} />
+          </button>
         </div>
       </div>
 
@@ -125,8 +141,7 @@ const Profile = ({ userData }) => {
                   type="date" 
                   value={personalData.fechaNacimiento} 
                   onChange={(e) => setPersonalData({...personalData, fechaNacimiento: e.target.value})}
-                  className={`input-field ${!isAdmin ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'bg-gray-50/50'}`}
-                  disabled={!isAdmin}
+                  className="input-field bg-gray-50/50"
                 />
               </div>
               <div className="space-y-2">
@@ -135,8 +150,7 @@ const Profile = ({ userData }) => {
                   type="tel" 
                   value={personalData.telefono} 
                   onChange={(e) => setPersonalData({...personalData, telefono: e.target.value})}
-                  className={`input-field ${!isAdmin ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'bg-gray-50/50'}`}
-                  disabled={!isAdmin}
+                  className="input-field bg-gray-50/50"
                 />
               </div>
             </div>
@@ -196,57 +210,73 @@ const Profile = ({ userData }) => {
               <h2 className="text-lg font-bold text-secondary">Cuenta Bancaria</h2>
             </div>
             
-            <div className="bg-tertiary rounded-xl p-5 border border-gray-100 mb-6 group relative">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm text-primary group-hover:scale-110 transition-transform">
+            {personalData.banco && (
+              <div className="bg-tertiary rounded-xl p-5 border border-gray-100 mb-6 flex items-center gap-4">
+                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm text-primary">
                   <Building2 size={24} />
                 </div>
                 <div className="flex-1 overflow-hidden">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <p className="text-sm font-bold text-secondary leading-none truncate">{userData?.banco || 'Pendiente'}</p>
-                    <div className="flex items-center gap-2">
-                      <Star size={12} className="fill-primary text-primary" />
-                      <span className="bg-success/10 text-success text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Principal</span>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-gray-400 truncate">{userData?.tipoCuenta} • **** {userData?.numeroCuenta?.slice(-4)}</p>
+                  <p className="text-sm font-bold text-secondary leading-none truncate">{personalData.banco}</p>
+                  <p className="text-[11px] text-gray-400 truncate mt-1">
+                    {personalData.tipoCuenta} • **** {personalData.numeroCuenta?.slice(-4) || ''}
+                  </p>
                 </div>
               </div>
-              
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                <button className="p-1.5 hover:bg-white rounded-lg text-gray-400 hover:text-error transition-colors" title="Eliminar cuenta">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
+            )}
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Información de Seguridad</label>
-                <div className="relative group">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Banco</label>
+                <select 
+                  value={personalData.banco} 
+                  onChange={(e) => setPersonalData({...personalData, banco: e.target.value})}
+                  className="input-field bg-gray-50/50"
+                >
+                  <option value="">Selecciona Banco...</option>
+                  <option value="Banco Estado">Banco Estado / CuentaRUT</option>
+                  <option value="Banco de Chile">Banco de Chile / Edwards</option>
+                  <option value="Santander">Santander</option>
+                  <option value="BCI">BCI</option>
+                  <option value="Scotiabank">Scotiabank</option>
+                  <option value="Itaú">Itaú</option>
+                  <option value="Banco Falabella">Banco Falabella</option>
+                  <option value="Banco BICE">Banco BICE</option>
+                  <option value="Coopeuch">Coopeuch</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Tipo de Cuenta</label>
+                <select 
+                  value={personalData.tipoCuenta} 
+                  onChange={(e) => setPersonalData({...personalData, tipoCuenta: e.target.value})}
+                  className="input-field bg-gray-50/50"
+                >
+                  <option value="">Selecciona Tipo...</option>
+                  <option value="Cuenta Corriente">Cuenta Corriente</option>
+                  <option value="Cuenta Vista / RUT">Cuenta Vista / RUT</option>
+                  <option value="Cuenta Ahorro">Cuenta Ahorro</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Número de Cuenta</label>
+                <div className="relative">
                   <input 
                     type={showAccountNumber ? "text" : "password"} 
-                    value={userData?.numeroCuenta || ''} 
-                    className="input-field bg-gray-50/50 text-sm tracking-wider font-mono pr-12" 
-                    readOnly 
+                    value={personalData.numeroCuenta} 
+                    onChange={(e) => setPersonalData({...personalData, numeroCuenta: e.target.value})}
+                    placeholder="Ej: 123456789"
+                    className="input-field bg-gray-50/50 font-mono pr-12"
                   />
                   <button 
+                    type="button"
                     onClick={() => setShowAccountNumber(!showAccountNumber)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-primary transition-colors"
                   >
                     {showAccountNumber ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3">
-                <button className="py-3 bg-tertiary hover:bg-gray-100 rounded-xl text-[10px] font-bold text-secondary uppercase tracking-widest transition-all flex items-center justify-center gap-2 border border-gray-100">
-                  <Plus size={14} />
-                  Añadir
-                </button>
-                <button className="py-3 bg-primary/10 hover:bg-primary/20 rounded-xl text-[10px] font-bold text-primary uppercase tracking-widest transition-all flex items-center justify-center gap-2 border border-primary/10">
-                  Actualizar
-                </button>
               </div>
             </div>
           </div>

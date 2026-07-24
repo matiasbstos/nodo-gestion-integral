@@ -12,7 +12,8 @@ import {
   ChevronRight,
   Settings,
   Calendar,
-  PlayCircle
+  PlayCircle,
+  Users
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -26,11 +27,15 @@ const Sidebar = ({ activeView, setActiveView, onLogout, userData, isOpen, onClos
 
   const menuItems = isAdmin ? [
     { id: 'admin-dashboard', label: 'Dashboard Consolidado', icon: Activity },
+    { id: 'admin-funcionarios', label: 'Funcionarios', icon: Users },
+    { id: 'pauta-turnos', label: 'Pauta de Turnos', icon: Calendar },
     { id: 'admin-operativa', label: 'Gestión Operativa', icon: MapPin },
     { id: 'admin-honorarios', label: 'Honorarios e Informes', icon: Briefcase },
     { id: 'admin-ajustes', label: 'Montos y Ajustes', icon: Settings },
     { type: 'separator', label: 'Mi Área Personal' },
     { id: 'attendance', label: 'Mi Asistencia', icon: Clock },
+    { id: 'my-shifts', label: 'Mis Turnos', icon: Calendar },
+    { id: 'fees', label: 'Mis Honorarios', icon: Wallet },
     { id: 'profile', label: 'Mi Perfil', icon: User },
   ] : [
     // Rol: USER (Funcionario Portal)

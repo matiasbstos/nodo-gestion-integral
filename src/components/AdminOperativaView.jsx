@@ -15,7 +15,9 @@ import {
   Briefcase,
   ShieldAlert,
   Play,
-  Database
+  Database,
+  X,
+  Info
 } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, orderBy, limit, addDoc } from 'firebase/firestore';
@@ -46,6 +48,52 @@ const AdminOperativaView = ({ userData }) => {
   const [centroAsignacion, setCentroAsignacion] = useState('');
   const [selectedFuncionarioSandbox, setSelectedFuncionarioSandbox] = useState('');
   
+  // Pre-registration States
+  const [regNombre, setRegNombre] = useState('');
+  const [regRut, setRegRut] = useState('');
+  const [regCorreo, setRegCorreo] = useState('');
+  const [regTipoPrestador, setRegTipoPrestador] = useState('');
+  const [regCentroAsignado, setRegCentroAsignado] = useState('SAR Arpillerista Elsa Romo Aravena');
+  const [regTipoContrato, setRegTipoContrato] = useState('Honorario por horas');
+  const [regValorHora, setRegValorHora] = useState('');
+  const [regGrado, setRegGrado] = useState('');
+  const [regCategoria, setRegCategoria] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [showRegSuccessModal, setShowRegSuccessModal] = useState(false);
+  const [registeredUser, setRegisteredUser] = useState(null);
+
+  const fetchFuncionarios = async () => {
+    setLoading(true);
+    try {
+      let q;
+      if (isAdminGlobal) {
+        // Global admin sees everyone (except other globals for security)
+        q = query(
+          collection(db, 'usuarios'), 
+          where('role', 'in', ['user', 'admin_local'])
+        );
+      } else {
+        // Local admin sees only their center's users
+        q = query(
+          collection(db, 'usuarios'), 
+          where('centroAsignado', '==', userData.centroAsignado),
+          where('role', '==', 'user')
+        );
+      }
+      const querySnapshot = await getDocs(q);
+      const docs = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setFuncionarios(docs);
+    } catch (err) {
+      console.error("Error fetching funcionarios:", err);
+      setError("Error al cargar funcionarios. Verifica permisos de Firestore.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (userData?.centroAsignado && !centroAsignacion) {
       setCentroAsignacion(userData.centroAsignado);
@@ -57,37 +105,6 @@ const AdminOperativaView = ({ userData }) => {
   ];
 
   useEffect(() => {
-    const fetchFuncionarios = async () => {
-      setLoading(true);
-      try {
-        let q;
-        if (isAdminGlobal) {
-          // Global admin sees everyone (except other globals for security)
-          q = query(
-            collection(db, 'usuarios'), 
-            where('role', 'in', ['user', 'admin_local'])
-          );
-        } else {
-          // Local admin sees only their center's users
-          q = query(
-            collection(db, 'usuarios'), 
-            where('centroAsignado', '==', userData.centroAsignado),
-            where('role', '==', 'user')
-          );
-        }
-        const querySnapshot = await getDocs(q);
-        const docs = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setFuncionarios(docs);
-      } catch (err) {
-        console.error("Error fetching funcionarios:", err);
-        setError("Error al cargar funcionarios. Verifica permisos de Firestore.");
-      } finally {
-        setLoading(false);
-      }
-    };
 
     const fetchSupportEmail = async () => {
       try {
@@ -355,80 +372,83 @@ const AdminOperativaView = ({ userData }) => {
           </form>
         </div>
 
-        {/* Configuración GPS */}
-        <div className="bg-[#1E293B] p-8 rounded-3xl shadow-xl text-white space-y-6 relative overflow-hidden flex flex-col">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full -mr-32 -mt-32 blur-3xl"></div>
-          
-          <div className="flex items-center gap-3 relative z-10">
-            <div className="bg-primary/20 p-2 rounded-xl text-primary">
-              <Navigation size={20} />
-            </div>
-            <h2 className="font-bold">Parámetros GPS Estratégicos</h2>
-          </div>
-
-          <div className="space-y-8 relative z-10 flex-1">
-            <div className="p-6 bg-white/5 rounded-2xl border border-white/10 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <p className="text-[10px] text-primary font-bold uppercase tracking-widest mb-1">Latitud de Validación</p>
-                  <input 
-                    type="text" 
-                    value={gpsConfig.lat}
-                    onChange={(e) => setGpsConfig(prev => ({ ...prev, lat: e.target.value }))}
-                    placeholder="-32.946..."
-                    className="w-full bg-transparent border-b border-white/10 py-2 font-mono font-bold text-lg focus:border-primary transition-colors focus:ring-0" 
-                  />
-                </div>
-                <div>
-                  <p className="text-[10px] text-primary font-bold uppercase tracking-widest mb-1">Longitud de Validación</p>
-                  <input 
-                    type="text" 
-                    value={gpsConfig.lng}
-                    onChange={(e) => setGpsConfig(prev => ({ ...prev, lng: e.target.value }))}
-                    placeholder="-71.548..."
-                    className="w-full bg-transparent border-b border-white/10 py-2 font-mono font-bold text-lg focus:border-primary transition-colors focus:ring-0" 
-                  />
-                </div>
+        {/* Columna Derecha */}
+        <div className="space-y-8 flex flex-col">
+          {/* Configuración GPS */}
+          <div className="bg-[#1E293B] p-8 rounded-3xl shadow-xl text-white space-y-6 relative overflow-hidden flex flex-col">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+            
+            <div className="flex items-center gap-3 relative z-10">
+              <div className="bg-primary/20 p-2 rounded-xl text-primary">
+                <Navigation size={20} />
               </div>
-              
-              <div className="flex items-start gap-4 pt-4 border-t border-white/5">
-                <div className="p-2 bg-success/10 rounded-lg text-success">
-                  <ShieldCheck size={20} />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-white uppercase tracking-tight mb-1">Cerca Geográfica Activa</p>
-                  <p className="text-xs text-gray-400 leading-relaxed">
-                    La validación biométrica se activa en un radio de <span className="text-white font-bold">50 metros</span> desde este punto central.
-                  </p>
-                </div>
-              </div>
+              <h2 className="font-bold">Parámetros GPS Estratégicos</h2>
             </div>
 
-            <div 
-              onClick={handleObtenerUbicacion}
-              className="bg-white/5 p-6 rounded-2xl border border-white/10 flex items-center gap-4 group cursor-pointer hover:bg-white/10 transition-all"
-            >
-              <div className="bg-white/10 p-3 rounded-xl group-hover:bg-primary transition-colors">
-                <MapPin size={24} />
+            <div className="space-y-8 relative z-10 flex-1">
+              <div className="p-6 bg-white/5 rounded-2xl border border-white/10 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-[10px] text-primary font-bold uppercase tracking-widest mb-1">Latitud de Validación</p>
+                    <input 
+                      type="text" 
+                      value={gpsConfig.lat}
+                      onChange={(e) => setGpsConfig(prev => ({ ...prev, lat: e.target.value }))}
+                      placeholder="-32.946..."
+                      className="w-full bg-transparent border-b border-white/10 py-2 font-mono font-bold text-lg focus:border-primary transition-colors focus:ring-0" 
+                    />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-primary font-bold uppercase tracking-widest mb-1">Longitud de Validación</p>
+                    <input 
+                      type="text" 
+                      value={gpsConfig.lng}
+                      onChange={(e) => setGpsConfig(prev => ({ ...prev, lng: e.target.value }))}
+                      placeholder="-71.548..."
+                      className="w-full bg-transparent border-b border-white/10 py-2 font-mono font-bold text-lg focus:border-primary transition-colors focus:ring-0" 
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-4 pt-4 border-t border-white/5">
+                  <div className="p-2 bg-success/10 rounded-lg text-success">
+                    <ShieldCheck size={20} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white uppercase tracking-tight mb-1">Cerca Geográfica Activa</p>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      La validación biométrica se activa en un radio de <span className="text-white font-bold">50 metros</span> desde este punto central.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="font-bold text-sm">Obtener ubicación actual</p>
-                <p className="text-xs text-gray-400 mt-0.5">Utilizar coordenadas del dispositivo administrativo.</p>
-              </div>
-            </div>
 
-            <button 
-              onClick={handleActualizarGPS}
-              disabled={isLoadingGPS}
-              className="w-full bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold uppercase tracking-widest transition-all shadow-lg shadow-primary/20 mt-auto flex items-center justify-center gap-2"
-            >
-              {isLoadingGPS ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  Guardando...
-                </>
-              ) : 'Actualizar Georeferencia'}
-            </button>
+              <div 
+                onClick={handleObtenerUbicacion}
+                className="bg-white/5 p-6 rounded-2xl border border-white/10 flex items-center gap-4 group cursor-pointer hover:bg-white/10 transition-all"
+              >
+                <div className="bg-white/10 p-3 rounded-xl group-hover:bg-primary transition-colors">
+                  <MapPin size={24} />
+                </div>
+                <div>
+                  <p className="font-bold text-sm">Obtener ubicación actual</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Utilizar coordenadas del dispositivo administrativo.</p>
+                </div>
+              </div>
+
+              <button 
+                onClick={handleActualizarGPS}
+                disabled={isLoadingGPS}
+                className="w-full bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold uppercase tracking-widest transition-all shadow-lg shadow-primary/20 mt-auto flex items-center justify-center gap-2"
+              >
+                {isLoadingGPS ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Guardando...
+                  </>
+                ) : 'Actualizar Georeferencia'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -797,6 +817,7 @@ const AdminOperativaView = ({ userData }) => {
           </div>
         </div>
       </div>
+
     </div>
   );
 };

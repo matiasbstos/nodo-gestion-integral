@@ -94,3 +94,25 @@ nodo-gestion-integral/
 ├── vite.config.js         # Configuración de compilación de Vite
 └── tailwind.config.js     # Configuración de Tailwind CSS
 ```
+
+---
+
+## 🧱 Muro de Actualizaciones (Changelog)
+
+### 🚀 versión 1.2.0 — (Julio 2026)
+
+* 📅 **Unificación del Módulo "Pauta de Turnos"**:
+  * Implementación de la grilla de calendario mensual de 7 columnas (Lunes a Domingo) con distinción de festivos y fines de semana en rojo.
+  * Casillas de `Festivo` dinámicas por día para alternar franjas horarias (Semana Largo `17-08h`, Fin de Semana Día `08-20h` y Noche `20-08h`).
+  * Planilla de dotación diaria completa para los 7 roles base (*Enfermero Jefe*, *TENS Rayos*, *TENS Vacunas*, *TENS Ambulancia*, *Conductor*, *Administrativo*, *Auxiliar*) más Médicos y Refuerzos.
+  * Auto-categorización por funcionario (Ley 19.378: Cat A a Cat F) e integración de gestión de inasistencias (licencias, permisos, vacaciones) y asignación inmediata de reemplazos.
+  * Tarjetas de totalización mensual al pie (`TOTAL DE TURNOS ASIGNADOS`) para Turno 1 (Verde), Turno 2 (Amarillo), Turno 3 (Celeste) y Turno 4 / Refuerzo (Púrpura).
+
+* 🏷️ **Asignación Directa de Turnos & Selección de Liquidación**:
+  * Modal de asignación directa con distinción de color por tipo de turno.
+  * Selector interactivo para cambiar la modalidad de liquidación asociada (*Horas Extras* vs. *Honorarios*).
+
+* 📆 **Grilla de Calendario por Funcionario**:
+  * Integración de la vista de calendario mensual y tarjetas totalizadoras dentro del expediente del funcionario en la pestaña `Turnos Asignados`.
+  * Barra de pestañas adaptable en multilínea (`flex-wrap`).
+

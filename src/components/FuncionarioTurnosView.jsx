@@ -126,6 +126,16 @@ const FuncionarioTurnosView = ({ userData }) => {
               const estaCancelado = turno.estado === 'cancelado_por_usuario';
               const estaPendiente = turno.estado === 'pendiente';
 
+              const tipoTurnoName = turno.tipoTurno || turno.turno || turno.tipo;
+              let shiftBadge = { label: 'Turno 1 (Verde)', cls: 'bg-emerald-100 text-emerald-800 border border-emerald-300' };
+              if (tipoTurnoName === 'Turno 2' || tipoTurnoName === 'Turno B') {
+                shiftBadge = { label: 'Turno 2 (Amarillo)', cls: 'bg-amber-100 text-amber-900 border border-amber-300' };
+              } else if (tipoTurnoName === 'Turno 3' || tipoTurnoName === 'Turno C') {
+                shiftBadge = { label: 'Turno 3 (Celeste)', cls: 'bg-sky-100 text-sky-800 border border-sky-300' };
+              } else if (tipoTurnoName === 'Refuerzo') {
+                shiftBadge = { label: 'Refuerzo', cls: 'bg-purple-100 text-purple-800 border border-purple-300' };
+              }
+
               return (
                 <div key={turno.id} className={`p-6 flex items-center justify-between hover:bg-gray-50/50 transition-colors ${estaPendiente ? 'bg-primary/5' : ''}`}>
                   <div className="flex items-center gap-6">
@@ -138,21 +148,32 @@ const FuncionarioTurnosView = ({ userData }) => {
                       </span>
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-bold text-secondary text-lg">
-                          {new Date(turno.inicio).toLocaleDateString('es-CL', { weekday: 'long' }).charAt(0).toUpperCase() + 
-                           new Date(turno.inicio).toLocaleDateString('es-CL', { weekday: 'long' }).slice(1)}
+                          {turno.nombreHorario || (
+                            new Date(turno.inicio).toLocaleDateString('es-CL', { weekday: 'long' }).charAt(0).toUpperCase() + 
+                            new Date(turno.inicio).toLocaleDateString('es-CL', { weekday: 'long' }).slice(1)
+                          )}
                         </p>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${shiftBadge.cls}`}>
+                          {shiftBadge.label}
+                        </span>
                         {estaPendiente && (
                           <span className="px-2 py-0.5 bg-primary text-white text-[8px] font-black uppercase rounded-md animate-pulse">
                             Nuevo
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
+                      <div className="flex items-center gap-3 text-sm text-gray-500 mt-1 flex-wrap">
                         <span className="flex items-center gap-1"><MapPin size={14} /> {turno.centroSalud}</span>
                         <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
                         <span className="flex items-center gap-1"><Clock size={14} /> {new Date(turno.inicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(turno.termino).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        {turno.rolTurno && (
+                          <>
+                            <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                            <span className="font-bold text-secondary text-xs bg-gray-100 px-2 py-0.5 rounded">{turno.rolTurno}</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

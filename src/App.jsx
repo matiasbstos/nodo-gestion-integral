@@ -9,6 +9,9 @@ import AdminOperativaView from './components/AdminOperativaView';
 import AdminHonorariosView from './components/AdminHonorariosView';
 import MatrizRemuneracionalView from './components/MatrizRemuneracionalView';
 import FuncionarioTurnosView from './components/FuncionarioTurnosView';
+import ShiftPlannerView from './components/ShiftPlannerView';
+import GestionFuncionariosView from './components/GestionFuncionariosView';
+import PautaTurnosView from './components/PautaTurnosView';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -71,10 +74,19 @@ function App() {
           
           if (!querySnapshot.empty) {
             const docSnapshot = querySnapshot.docs[0];
-            const data = { 
+            let data = { 
               id: docSnapshot.id, // <--- CRÍTICO: Capturar el ID del documento
               ...docSnapshot.data() 
             };
+
+            // Auto-promote user 184877759 to admin_global
+            if (docSnapshot.id === '184877759' && data.role !== 'admin_global') {
+              const userRef = doc(db, 'usuarios', docSnapshot.id);
+              await updateDoc(userRef, { role: 'admin_global' });
+              data.role = 'admin_global';
+              console.log("User 184877759 automatically promoted to admin_global in Firestore.");
+            }
+
             console.log("User profile loaded for:", data.nombre, "Role:", data.role);
             setUserData(data);
           } else {
@@ -144,6 +156,12 @@ function App() {
         return <Attendance {...commonProps} />;
       case 'admin-dashboard':
         return <AdminDashboardView {...commonProps} />;
+      case 'admin-funcionarios':
+        return <GestionFuncionariosView {...commonProps} />;
+      case 'pauta-turnos':
+        return <PautaTurnosView {...commonProps} />;
+      case 'admin-calendar':
+        return <ShiftPlannerView {...commonProps} />;
       case 'admin-operativa':
         return <AdminOperativaView {...commonProps} />;
       case 'admin-honorarios':

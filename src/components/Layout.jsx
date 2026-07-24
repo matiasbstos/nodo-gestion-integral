@@ -9,7 +9,8 @@ const Layout = ({ children, activeView, setActiveView, onLogout, userData, pasoT
     attendance: 'Asistencia',
     profile: 'Configuración de Perfil',
     fees: 'Honorarios y Reportes',
-    reports: 'Mis Informes'
+    reports: 'Mis Informes',
+    'pauta-turnos': 'Pauta de Turnos Mensual'
   };
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
