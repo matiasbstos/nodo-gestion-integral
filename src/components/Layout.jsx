@@ -10,7 +10,9 @@ const Layout = ({ children, activeView, setActiveView, onLogout, userData, pasoT
     profile: 'Configuración de Perfil',
     fees: 'Honorarios y Reportes',
     reports: 'Mis Informes',
-    'pauta-turnos': 'Pauta de Turnos Mensual'
+    'pauta-turnos': 'Pauta de Turnos Mensual',
+    simulador: 'Simulador de Pruebas & Pruebas en Vivo',
+    auditoria: 'Registro de Auditoría & Trazabilidad'
   };
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);

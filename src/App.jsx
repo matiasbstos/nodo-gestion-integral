@@ -12,6 +12,8 @@ import FuncionarioTurnosView from './components/FuncionarioTurnosView';
 import ShiftPlannerView from './components/ShiftPlannerView';
 import GestionFuncionariosView from './components/GestionFuncionariosView';
 import PautaTurnosView from './components/PautaTurnosView';
+import SimuladorPruebasView from './components/SimuladorPruebasView';
+import AuditoriaView from './components/AuditoriaView';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -157,6 +159,10 @@ function App() {
         return <GestionFuncionariosView {...commonProps} />;
       case 'pauta-turnos':
         return <PautaTurnosView {...commonProps} />;
+      case 'simulador':
+        return <SimuladorPruebasView {...commonProps} />;
+      case 'auditoria':
+        return <AuditoriaView {...commonProps} />;
       case 'admin-calendar':
         return <ShiftPlannerView {...commonProps} />;
       case 'admin-operativa':

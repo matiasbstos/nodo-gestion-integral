@@ -13,7 +13,9 @@ import {
   Settings,
   Calendar,
   PlayCircle,
-  Users
+  Users,
+  FlaskConical,
+  ShieldCheck
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -29,6 +31,8 @@ const Sidebar = ({ activeView, setActiveView, onLogout, userData, isOpen, onClos
     { id: 'admin-dashboard', label: 'Dashboard Consolidado', icon: Activity },
     { id: 'admin-funcionarios', label: 'Funcionarios', icon: Users },
     { id: 'pauta-turnos', label: 'Pauta de Turnos', icon: Calendar },
+    { id: 'simulador', label: 'Simulador de Pruebas', icon: FlaskConical },
+    { id: 'auditoria', label: 'Auditoría', icon: ShieldCheck },
     { id: 'admin-operativa', label: 'Gestión Operativa', icon: MapPin },
     { id: 'admin-honorarios', label: 'Honorarios e Informes', icon: Briefcase },
     { id: 'admin-ajustes', label: 'Montos y Ajustes', icon: Settings },

@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { calcularHorasTurno } from '../utils/timeUtils';
 import InformeHonorariosPrint from './InformeHonorariosPrint';
+import { logAuditAction } from '../utils/auditLogger';
 
 // ─── Shift & Schedule Definitions ─────────────────────────────────────────────
 
@@ -921,6 +922,14 @@ const GestionFuncionariosView = ({ userData }) => {
       const userRef = doc(db, 'usuarios', docId);
       await setDoc(userRef, { status: newStatus, updatedAt: new Date().toISOString() }, { merge: true });
 
+      await logAuditAction(db, {
+        usuario: userData,
+        accion: newStatus === 'inactivo' ? 'INACTIVACION_EXPEDIENTE' : 'ACTIVACION_EXPEDIENTE',
+        detalles: `El funcionario fue colocado en estado ${newStatus.toUpperCase()}`,
+        targetFuncionario: selectedFunc,
+        categoria: 'expediente'
+      });
+
       const updated = { ...selectedFunc, status: newStatus };
       setSelectedFunc(updated);
       setFuncionarios(prev => prev.map(u => (u.id === docId || u.rut === updated.rut) ? updated : u));
@@ -937,6 +946,14 @@ const GestionFuncionariosView = ({ userData }) => {
     try {
       const docId = selectedFunc.id || selectedFunc.rut;
       await deleteDoc(doc(db, 'usuarios', docId));
+
+      await logAuditAction(db, {
+        usuario: userData,
+        accion: 'ELIMINACION_FUNCIONARIO',
+        detalles: `Eliminación permanente del expediente del funcionario del sistema`,
+        targetFuncionario: selectedFunc,
+        categoria: 'expediente'
+      });
 
       setFuncionarios(prev => prev.filter(u => u.id !== docId && u.rut !== selectedFunc.rut));
       setSelectedFunc(null);
