@@ -68,53 +68,55 @@ const SimuladorPruebasView = ({ userData }) => {
     setLoading(true);
     try {
       const snap = await getDocs(collection(db, 'usuarios'));
-      const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      let list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      if (list.length === 0) {
-        // Fallback default list for testing
-        const defaultList = [
-          {
-            id: '264541840',
-            nombre: 'Natacha Guevara',
-            rut: '26.454.184-0',
-            correoInstitucional: 'naty.gueleo28@gmail.com',
-            tipoPrestador: 'Médico Cirujano',
-            centroAsignado: 'SAR Arpillerista Elsa Romo Aravena',
-            tipoContrato: 'Honorario por horas',
-            categoria: 'A',
-            bancoData: {
-              tipoCuenta: 'Cuenta Corriente',
-              banco: 'Banco de Chile',
-              numeroCuenta: '00-250-20799-00',
-              telefono: '941234243',
-              email: 'naty.gueleo28@gmail.com'
-            }
-          },
-          {
-            id: '187785544',
-            nombre: 'Nadia Araya Muñoz',
-            rut: '18.778.554-4',
-            correoInstitucional: 'nadia.araya@cormumel.cl',
-            tipoPrestador: 'Administrativo',
-            centroAsignado: 'SAR Arpillerista Elsa Romo Aravena',
-            tipoContrato: 'Contrata Plazo Fijo',
-            categoria: 'E',
-            bancoData: {
-              tipoCuenta: 'Cuenta Corriente',
-              banco: 'Banco Estado',
-              numeroCuenta: '187785544',
-              telefono: '99999999',
-              email: 'nadia.araya@cormumel.cl'
-            }
-          }
-        ];
-        setFuncionarios(defaultList);
-        setSelectedFuncId(defaultList[0].id);
-        setSelectedFunc(defaultList[0]);
-      } else {
-        setFuncionarios(list);
-        setSelectedFuncId(list[0].id);
-        setSelectedFunc(list[0]);
+      // Explicit profile for Matias Bustos (Admin Global + Funcionario Prestador)
+      const matiasProfile = {
+        id: userData?.rut || userData?.id || '184877759',
+        nombre: userData?.nombre || userData?.displayName || 'Matias Eduardo Bustos Huerta',
+        rut: userData?.rut || '18.487.775-9',
+        correoInstitucional: userData?.correoInstitucional || userData?.correo || 'matias.bustos@cormumel.cl',
+        tipoPrestador: 'Médico Cirujano (Prestador / Refuerzo SAR)',
+        centroAsignado: 'SAR Arpillerista Elsa Romo Aravena',
+        tipoContrato: 'Honorario por horas',
+        categoria: 'A',
+        status: 'activo',
+        role: 'admin_global',
+        bancoData: {
+          tipoCuenta: 'Cuenta Corriente',
+          banco: 'Banco de Chile',
+          numeroCuenta: '00-184-87775-9',
+          telefono: '987654321',
+          email: userData?.correoInstitucional || userData?.correo || 'matias.bustos@cormumel.cl'
+        }
+      };
+
+      const hasMatias = list.some(f => 
+        (f.rut && f.rut.includes('18487775')) || 
+        (f.id && f.id.includes('18487775')) || 
+        (f.nombre && f.nombre.toLowerCase().includes('matias'))
+      );
+
+      if (!hasMatias) {
+        list = [matiasProfile, ...list];
+        try {
+          await setDoc(doc(db, 'usuarios', matiasProfile.id), matiasProfile, { merge: true });
+        } catch (e) {
+          console.warn("Could not sync Matias profile to Firestore:", e);
+        }
+      }
+
+      setFuncionarios(list);
+      
+      // Default selection to Matias Bustos
+      const matiasInList = list.find(f => 
+        (f.nombre && f.nombre.toLowerCase().includes('matias')) || 
+        f.id === matiasProfile.id
+      ) || list[0];
+
+      if (matiasInList) {
+        setSelectedFuncId(matiasInList.id);
+        setSelectedFunc(matiasInList);
       }
     } catch (error) {
       console.error("Error fetching funcionarios for simulation:", error);
