@@ -1625,24 +1625,40 @@ const GestionFuncionariosView = ({ userData }) => {
 
                     const dayTurns = monthTurns.filter(t => t.fecha === cell.dateStr);
 
+                    const now = new Date();
+                    const todayLocalStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                    const isTodayCell = cell.dateStr === todayLocalStr;
+
                     return (
                       <div
                         key={cell.key}
-                        className={`min-h-[130px] p-2 flex flex-col justify-between transition-colors bg-white hover:bg-gray-50/50 ${
-                          cell.isWeekend ? 'bg-rose-50/10' : ''
+                        className={`min-h-[130px] p-2 flex flex-col justify-between transition-all ${
+                          isTodayCell
+                            ? 'bg-amber-50/50 ring-2 ring-amber-400 border-amber-300 shadow-md shadow-amber-400/20 relative z-10'
+                            : cell.isWeekend
+                            ? 'bg-rose-50/10 hover:bg-rose-50/20'
+                            : 'bg-white hover:bg-gray-50/50'
                         }`}
                       >
-                        <div className="flex items-center justify-between pb-1.5 border-b border-gray-100">
-                          <span className={`text-sm font-black ${cell.isWeekend ? 'text-rose-600' : 'text-secondary'}`}>
-                            {cell.day}
-                          </span>
+                        <div className={`flex items-center justify-between pb-1.5 border-b ${isTodayCell ? 'border-amber-200' : 'border-gray-100'}`}>
+                          {isTodayCell ? (
+                            <div className="flex items-center gap-1.5 bg-amber-500 text-white px-2.5 py-0.5 rounded-full text-xs font-black shadow-sm">
+                              <span>{cell.day}</span>
+                              <span className="text-[9px] font-extrabold uppercase bg-white/20 px-1 rounded">HOY</span>
+                            </div>
+                          ) : (
+                            <span className={`text-sm font-black ${cell.isWeekend ? 'text-rose-600' : 'text-secondary'}`}>
+                              {cell.day}
+                            </span>
+                          )}
+
                           {dayTurns.length === 0 && (
                             <button
                               onClick={() => {
                                 setTurnoForm(prev => ({ ...prev, fechaInicio: cell.dateStr, fechaFin: cell.dateStr }));
                                 setShowAssignTurnoModal(true);
                               }}
-                              className="text-[10px] text-gray-300 hover:text-primary font-bold transition-colors"
+                              className={`text-[10px] font-bold transition-colors ${isTodayCell ? 'text-amber-700 hover:text-amber-900 font-extrabold' : 'text-gray-300 hover:text-primary'}`}
                               title="Asignar turno este día"
                             >
                               + Turno

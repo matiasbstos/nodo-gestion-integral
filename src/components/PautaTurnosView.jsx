@@ -473,25 +473,47 @@ const PautaTurnosView = ({ userData }) => {
                 const isFestivo = cell.isFestivo;
                 const dayTurns = currentMonthTurns.filter(t => t.fecha === cell.dateStr);
 
+                const now = new Date();
+                const todayLocalStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                const isTodayCell = cell.dateStr === todayLocalStr;
+
                 return (
                   <div 
                     key={cell.key} 
-                    className={`min-h-[165px] p-2.5 flex flex-col justify-between transition-colors bg-white hover:bg-gray-50/60 ${
-                      cell.isWeekend || isFestivo ? 'bg-rose-50/10' : ''
+                    className={`min-h-[165px] p-2.5 flex flex-col justify-between transition-all ${
+                      isTodayCell
+                        ? 'bg-amber-50/50 ring-2 ring-amber-400 border-amber-300 shadow-md shadow-amber-400/20 relative z-10'
+                        : cell.isWeekend || isFestivo
+                        ? 'bg-rose-50/10 hover:bg-rose-50/20'
+                        : 'bg-white hover:bg-gray-50/60'
                     }`}
                   >
                     {/* Cell Header */}
-                    <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-                      <button
-                        onClick={() => {
-                          setSelectedDate(cell.dateObj);
-                          setViewMode('daily');
-                        }}
-                        className={`text-base font-black hover:underline ${cell.isWeekend ? 'text-rose-600' : 'text-secondary'}`}
-                        title="Ver planilla completa del día"
-                      >
-                        {cell.day}
-                      </button>
+                    <div className={`flex items-center justify-between pb-2 border-b ${isTodayCell ? 'border-amber-200' : 'border-gray-100'}`}>
+                      {isTodayCell ? (
+                        <button
+                          onClick={() => {
+                            setSelectedDate(cell.dateObj);
+                            setViewMode('daily');
+                          }}
+                          className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-0.5 rounded-full text-xs font-black shadow-sm transition-transform hover:scale-105"
+                          title="Ver planilla completa de HOY"
+                        >
+                          <span>{cell.day}</span>
+                          <span className="text-[9px] font-extrabold uppercase bg-white/20 px-1 rounded">HOY</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setSelectedDate(cell.dateObj);
+                            setViewMode('daily');
+                          }}
+                          className={`text-base font-black hover:underline ${cell.isWeekend ? 'text-rose-600' : 'text-secondary'}`}
+                          title="Ver planilla completa del día"
+                        >
+                          {cell.day}
+                        </button>
+                      )}
                       
                       <label className="inline-flex items-center gap-1 cursor-pointer select-none text-[10px] font-bold text-rose-500 hover:text-rose-700">
                         <input 
