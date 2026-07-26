@@ -2147,7 +2147,7 @@ const GestionFuncionariosView = ({ userData }) => {
         {renderToast()}
         <div className="p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
           {/* Top Action Bar */}
-          <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="print:hidden flex items-center justify-between gap-4 flex-wrap">
             <button onClick={closeExpediente}
               className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors bg-white px-4 py-2.5 rounded-2xl border border-gray-100 shadow-sm">
               <ChevronLeft size={18} />
@@ -2174,7 +2174,7 @@ const GestionFuncionariosView = ({ userData }) => {
           </div>
 
           {/* Banner Header Card */}
-          <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="print:hidden bg-white border border-gray-100 rounded-3xl p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-5">
               
               {/* Passport Photo Avatar with Crop Badge */}
@@ -2226,7 +2226,7 @@ const GestionFuncionariosView = ({ userData }) => {
           </div>
 
           {/* Tab Navigation */}
-          <div className="bg-white border border-gray-100 rounded-3xl p-3 shadow-sm">
+          <div className="print:hidden bg-white border border-gray-100 rounded-3xl p-3 shadow-sm">
             <div className="flex flex-wrap gap-2.5">
               {TABS.map(tab => (
                 <button key={tab.id} onClick={() => setActiveTab(tab.id)}

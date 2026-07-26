@@ -16,11 +16,11 @@ const Layout = ({ children, activeView, setActiveView, onLogout, userData, pasoT
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   return (
-    <div className="flex min-h-screen bg-tertiary relative overflow-x-hidden">
+    <div className="flex min-h-screen bg-tertiary relative overflow-x-hidden print:block print:min-h-0 print:bg-white print:overflow-visible">
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden animate-fade-in"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden animate-fade-in print:hidden"
           onClick={closeMobileMenu}
         />
       )}
@@ -35,7 +35,7 @@ const Layout = ({ children, activeView, setActiveView, onLogout, userData, pasoT
         pasoTutorial={pasoTutorial}
         setPasoTutorial={setPasoTutorial}
       />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 print:block print:overflow-visible">
         <Topbar 
           currentViewTitle={viewTitles[activeView] || activeView} 
           userName={userData?.nombre}
@@ -44,7 +44,7 @@ const Layout = ({ children, activeView, setActiveView, onLogout, userData, pasoT
           pasoTutorial={pasoTutorial}
           setPasoTutorial={setPasoTutorial}
         />
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto print:block print:overflow-visible">
           {children}
         </main>
       </div>

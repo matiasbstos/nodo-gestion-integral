@@ -62,7 +62,7 @@ const Sidebar = ({ activeView, setActiveView, onLogout, userData, isOpen, onClos
       )}
 
       <aside className={cn(
-        "w-[280px] bg-secondary text-white flex flex-col h-screen fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out lg:sticky lg:translate-x-0 lg:shrink-0",
+        "print:hidden w-[280px] bg-secondary text-white flex flex-col h-screen fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out lg:sticky lg:translate-x-0 lg:shrink-0",
         isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
       )}>
         {/* Mobile Close Button ... same code ... */}

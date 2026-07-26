@@ -19,7 +19,7 @@ const Topbar = ({ currentViewTitle, userName, userRole, onOpenMenu }) => {
   };
 
   return (
-    <header className="h-[80px] bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-8 sticky top-0 z-20">
+    <header className="print:hidden h-[80px] bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-8 sticky top-0 z-20">
       <div className="flex items-center gap-4">
         {/* Hamburger Menu - Only Mobile/Tablet */}
         <button 
