@@ -343,10 +343,17 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
       return showNotify("No tienes ningún turno aceptado en tu agenda.", "Sin Turno Activo", "warning");
     }
 
-    // VERIFICACIÓN DE FECHA Y HORA DE MARCAJE (Item 4)
-    const now = new Date();
-    const esModoPrueba = Boolean(userData?.modoPruebaActivo || userData?.esPrueba || turnoToStart.id === 'mock-123');
+    // DETECCIÓN EXCLUSIVA DE MODO PRUEBA / SIMULADOR DE PRUEBAS
+    const esModoPrueba = Boolean(
+      userData?.modoPruebaActivo || 
+      userData?.esPrueba || 
+      turnoToStart.id === 'mock-123' ||
+      turnoToStart.esPrueba ||
+      turnoToStart.modoPrueba ||
+      turnoToStart.esSimulado
+    );
 
+    // En Modo Producción (fuera de Modo Prueba): Exigir ventana estricta de 10 min antes / 10 min después
     if (!esModoPrueba && turnoToStart.inicio) {
       const inicioTurno = new Date(turnoToStart.inicio);
       
