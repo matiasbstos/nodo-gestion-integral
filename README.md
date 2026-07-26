@@ -99,6 +99,22 @@ nodo-gestion-integral/
 
 ## 🧱 Muro de Actualizaciones (Changelog)
 
+### 🚀 versión 1.5.0 — (26 de Julio de 2026)
+
+* 💵 **Diccionario de Valores Ley 19.378 (`escalaRemuneraciones.js`)**:
+  * Creación del archivo utilitario `src/utils/escalaRemuneraciones.js` con la estructura de tarifas planas por hora estimada para turnos de urgencia SAR:
+    * **Cat A (Médicos, Odontólogos)**: `$21.000 / hr`
+    * **Cat B (Enfermeras, Kinesiólogos, Matronas)**: `$12.500 / hr`
+    * **Cat C (TENS)**: `$6.800 / hr`
+    * **Cat D (Técnicos de Salud)**: `$5.500 / hr`
+    * **Cat E (Administrativos)**: `$4.800 / hr`
+    * **Cat F (Auxiliares, Choferes)**: `$4.200 / hr`
+
+* ⚡ **Lógica de Autorrellenado en "Montos y Ajustes" (`MatrizRemuneracionalView.jsx`)**:
+  * Botones de acción directa **`⚡ Autorrellenar Cat [A-F]`** y **`⚡ Autorrellenar Matriz Global (A a F)`**.
+  * Pre-llenado automático de todos los niveles (Nivel 15 al Nivel 1) con los valores referenciales en un clic.
+  * Transacción por lote en Firestore y registro inmediato en el módulo de **Auditoría**.
+
 ### 🚀 versión 1.4.0 — (26 de Julio de 2026)
 
 * 🧪 **Módulo "Simulador de Pruebas" (Sandbox de Administrador)**:
