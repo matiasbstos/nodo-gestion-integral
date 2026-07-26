@@ -99,6 +99,20 @@ nodo-gestion-integral/
 
 ## 🧱 Muro de Actualizaciones (Changelog)
 
+### 🚀 versión 1.4.0 — (26 de Julio de 2026)
+
+* 🧪 **Módulo "Simulador de Pruebas" (Sandbox de Administrador)**:
+  * Selección interactiva de cualquier funcionario del sistema para realizar pruebas en vivo.
+  * **Simulación de Asignación de Turnos**: Asignación directa de Turno 1 (Verde), Turno 2 (Amarillo), Turno 3 (Celeste) y Refuerzos (Púrpura) con alternancia de modalidad de liquidación (*Honorarios* vs *Horas Extras*).
+  * **Simulación de Marcajes**: Registro simulado de eventos de *Entrada* y *Salida* de asistencia.
+  * **Inclusión Directa del Informe PDF**: Cálculo automático de horas trabajadas y previsualización en tiempo real del documento oficial `<InformeHonorariosPrint />` para impresión A4.
+
+* 🛡️ **Módulo "Auditoría" & Trazabilidad Completa**:
+  * Registro cronológico en tiempo real (`auditoria`) de todas las acciones del sistema.
+  * Clasificación y filtros por rol: *Administrador Global*, *Administrador Local*, *Funcionario Activo* y *Ex-funcionario (Inactivo)*.
+  * Filtro por categoría (*Pauta & Turnos*, *Marcajes & Asistencia*, *Informes & Honorarios*, *Expedientes & Incidencias*).
+  * Buscador interactivo por nombre, RUT, acción o descripción del evento, más exportación directa de reportes a CSV.
+
 ### 🚀 versión 1.3.0 — (26 de Julio de 2026)
 
 * 📄 **Informe Oficial de Prestación de Servicios (`<InformeHonorariosPrint />`)**:
