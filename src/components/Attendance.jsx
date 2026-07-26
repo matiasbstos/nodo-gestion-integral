@@ -349,26 +349,26 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
 
     if (!esModoPrueba && turnoToStart.inicio) {
       const inicioTurno = new Date(turnoToStart.inicio);
-      const terminoTurno = turnoToStart.termino ? new Date(turnoToStart.termino) : new Date(inicioTurno.getTime() + 12 * 3600 * 1000);
       
-      // Ventana de marcaje: Desde 2 horas antes del inicio hasta la hora de término del turno
-      const ventanaInicio = new Date(inicioTurno.getTime() - 2 * 60 * 60 * 1000);
-      const ventanaFin = new Date(terminoTurno.getTime());
+      // Ventana de marcaje estricta: 10 minutos antes y 10 minutos después del inicio del turno
+      const ventanaInicio = new Date(inicioTurno.getTime() - 10 * 60 * 1000);
+      const ventanaFin = new Date(inicioTurno.getTime() + 10 * 60 * 1000);
+
+      const horaInicioStr = inicioTurno.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const fechaFormatStr = inicioTurno.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
 
       if (now < ventanaInicio) {
-        const fechaFormat = inicioTurno.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
-        const horaFormat = inicioTurno.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         return showNotify(
-          `⏰ Marcaje No Disponible Aún:\nEste turno está programado para el ${fechaFormat} a las ${horaFormat}.\nPodrás marcar entrada únicamente durante la ventana de tiempo del turno (desde 2 horas antes de su inicio).`,
-          "Fuera de Horario",
+          `⏰ Marcaje Anticipado No Permitido:\nEste turno está programado para el ${fechaFormatStr} a las ${horaInicioStr}.\nSolo podrás marcar entrada dentro del rango de tolerancia (desde 10 minutos antes del inicio).`,
+          "Fuera de Tolerancia (Muy Temprano)",
           "warning"
         );
       }
 
       if (now > ventanaFin) {
         return showNotify(
-          "⚠️ El tiempo límite de este turno ha expirado. Si asististe a este turno, por favor contacta al Administrador Local para registrar el marcaje manual.",
-          "Turno Expirado",
+          `⚠️ Tolerancia de Entrada Excedida:\nEste turno inició a las ${horaInicioStr}. El margen de tolerancia para marcar entrada es de máximo 10 minutos después de la hora de inicio.\nPor favor contacta al Administrador Local para gestionar un marcaje manual o justificación.`,
+          "Fuera de Tolerancia (Atraso Excedido)",
           "warning"
         );
       }
