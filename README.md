@@ -99,6 +99,24 @@ nodo-gestion-integral/
 
 ## 🧱 Muro de Actualizaciones (Changelog)
 
+### 🚀 versión 1.3.0 — (26 de Julio de 2026)
+
+* 📄 **Informe Oficial de Prestación de Servicios (`<InformeHonorariosPrint />`)**:
+  * Réplica visual exacta (pixel-perfect) del documento oficial de honorarios de la Corporación Municipal de Melipilla en 2 páginas A4.
+  * Integración del logotipo oficial corporativo (`logo_corporativo.png` almacenado en la carpeta `IMG/` y `public/img/`).
+  * Alineación exacta de encabezados (`NOMBRE`, `RUT`, `CARGO`, `LUGAR`, `MES Y AÑO`) con colons (`:`) verticalmente alineados.
+  * Tablas de resumen de servicio (`Lu-Vi`, `Sa-Do-Fest`), montos totales y cuadro de transferencia bancaria.
+  * Distribución de bloques de firma: 3 firmas horizontales en Página 1 y 2 firmas en Página 2.
+  * **Modo de Edición Dinámico**: Permite ajustar horas, valores, datos bancarios y actividades antes de exportar el PDF definitivo.
+
+* 🖨️ **Aislamiento Estricto de Impresión A4 Multipágina (2 Hojas)**:
+  * Reglas CSS `@media print` con aislamiento estricto que ocultan la UI circundante (Sidebar, Topbar, tarjetas de perfil y pestañas).
+  * Flujo estático y salto de página continuo (`break-after-page`) que garantiza la exportación limpia de las **2 páginas completas** del documento.
+
+* 🚨 **Liberación Automática de Puestos Vacantes & Reemplazos**:
+  * Sincronización automática al registrar licencias médicas, vacaciones, permisos o inasistencias en el perfil del funcionario, liberando los turnos programados como **VACANTE** en la Pauta.
+  * Botón destacado de **`+ Asignar Reemplazo`** para reasignar cargos vacantes a personal disponible en un clic.
+
 ### 🚀 versión 1.2.0 — (Julio 2026)
 
 * 📅 **Unificación del Módulo "Pauta de Turnos"**:
