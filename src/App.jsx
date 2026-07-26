@@ -54,28 +54,25 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
       if (firebaseUser) {
-        // Domain Validation
-        if (!firebaseUser.email?.endsWith('@cormumel.cl')) {
-          console.error("Unauthorized domain access attempt:", firebaseUser.email);
-          alert("Acceso restringido. Debe utilizar su correo institucional @cormumel.cl");
-          await signOut(auth);
-          setLoading(false);
-          return;
-        }
-
         console.log("User authenticated:", firebaseUser.email);
         setUser(firebaseUser);
         
         try {
-          // Robust Profile Fetching
+          // Robust Profile Fetching (Supports @cormumel.cl, @gmail.com, @hotmail.com, etc.)
           const { collection, query, where, getDocs } = await import('firebase/firestore');
-          const q = query(collection(db, 'usuarios'), where('correoInstitucional', '==', firebaseUser.email));
-          const querySnapshot = await getDocs(q);
+          let querySnapshot = await getDocs(query(collection(db, 'usuarios'), where('correoInstitucional', '==', firebaseUser.email)));
+          
+          if (querySnapshot.empty) {
+            querySnapshot = await getDocs(query(collection(db, 'usuarios'), where('correo', '==', firebaseUser.email)));
+          }
+          if (querySnapshot.empty) {
+            querySnapshot = await getDocs(query(collection(db, 'usuarios'), where('email', '==', firebaseUser.email)));
+          }
           
           if (!querySnapshot.empty) {
             const docSnapshot = querySnapshot.docs[0];
             let data = { 
-              id: docSnapshot.id, // <--- CRÍTICO: Capturar el ID del documento
+              id: docSnapshot.id,
               ...docSnapshot.data() 
             };
 

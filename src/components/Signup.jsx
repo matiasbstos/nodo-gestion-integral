@@ -28,11 +28,14 @@ const Signup = ({ onBack, onSuccess }) => {
       let cleanRUT = '';
       
       if (isEmail) {
-        const q = query(
-          collection(db, 'usuarios'), 
-          where('correoInstitucional', '==', inputVal.toLowerCase().trim())
-        );
-        const snap = await getDocs(q);
+        const cleanEmail = inputVal.toLowerCase().trim();
+        let snap = await getDocs(query(collection(db, 'usuarios'), where('correoInstitucional', '==', cleanEmail)));
+        if (snap.empty) {
+          snap = await getDocs(query(collection(db, 'usuarios'), where('correo', '==', cleanEmail)));
+        }
+        if (snap.empty) {
+          snap = await getDocs(query(collection(db, 'usuarios'), where('email', '==', cleanEmail)));
+        }
         if (!snap.empty) {
           userDoc = snap.docs[0];
           cleanRUT = userDoc.id;
@@ -63,10 +66,10 @@ const Signup = ({ onBack, onSuccess }) => {
       }
       
       const userData = userDoc.data();
-      const email = userData.correoInstitucional;
+      const email = userData.correoInstitucional || userData.correo || userData.email;
       
       if (!email) {
-        throw new Error('El perfil pre-registrado no tiene un correo institucional válido. Contacta a soporte.');
+        throw new Error('El perfil pre-registrado no tiene un correo electrónico de contacto válido. Contacta a tu administrador.');
       }
       
       if (userData.uid) {

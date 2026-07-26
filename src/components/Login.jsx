@@ -43,7 +43,8 @@ const Login = ({ onLogin }) => {
         throw new Error('El RUT no está registrado en el sistema. Por favor, regístrate primero.');
       }
 
-      const email = userDoc.data().correoInstitucional;
+      const userData = userDoc.data();
+      const email = userData.correoInstitucional || userData.correo || userData.email;
       console.log("Email found for RUT:", email);
 
       // 2. Authenticate with Firebase Auth

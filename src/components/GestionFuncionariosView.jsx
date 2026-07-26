@@ -170,8 +170,14 @@ const formatRutInput = (value = '') => {
 };
 
 const isValidEmailDomain = (email = '') => {
+  if (!email) return false;
   const clean = email.toLowerCase().trim();
-  return clean.endsWith('@cormumel.cl');
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regex.test(clean);
+};
+
+export const isInstitutionalEmail = (email = '') => {
+  return email?.toLowerCase()?.trim()?.endsWith('@cormumel.cl') || false;
 };
 
 // ─── Novedad type map ───────────────────────────────────────────────────────────
@@ -863,11 +869,11 @@ const GestionFuncionariosView = ({ userData }) => {
 
   const handleSaveProfile = async () => {
     if (!editProfileData.nombre || !editProfileData.rut || !editProfileData.correoInstitucional) {
-      return showToast('Completa Nombre, RUT y Correo Institucional.', 'warning');
+      return showToast('Completa Nombre, RUT y Correo Electrónico.', 'warning');
     }
 
     if (!isValidEmailDomain(editProfileData.correoInstitucional)) {
-      return showToast('El correo institucional debe pertenecer al dominio @cormumel.cl', 'error');
+      return showToast('Por favor ingrese un correo electrónico válido (ej: usuario@gmail.com, usuario@cormumel.cl)', 'error');
     }
 
     setSavingProfile(true);
@@ -1092,7 +1098,7 @@ const GestionFuncionariosView = ({ userData }) => {
     if (cleanRUT.length < 7) return showToast('RUT inválido.', 'error');
     
     if (!isValidEmailDomain(regCorreo)) {
-      return showToast('El correo institucional debe terminar en @cormumel.cl', 'error');
+      return showToast('Por favor ingrese un correo electrónico válido (ej: usuario@gmail.com, usuario@cormumel.cl, etc.)', 'error');
     }
 
     setIsRegistering(true);
@@ -1101,10 +1107,13 @@ const GestionFuncionariosView = ({ userData }) => {
       const snap = await getDoc(userDocRef);
       if (snap.exists()) { setIsRegistering(false); return showToast('Este RUT ya está registrado.', 'warning'); }
 
+      const cleanEmail = regCorreo.toLowerCase().trim();
       await setDoc(userDocRef, {
         nombre: regNombre,
         rut: cleanRUT,
-        correoInstitucional: regCorreo.toLowerCase().trim(),
+        correoInstitucional: cleanEmail,
+        correo: cleanEmail,
+        email: cleanEmail,
         tipoPrestador: regTipoPrestador,
         centroAsignado: regCentroAsignado,
         tipoContrato: regTipoContrato,
@@ -1972,10 +1981,13 @@ const GestionFuncionariosView = ({ userData }) => {
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">Correo Institucional *</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">Correo Electrónico *</label>
                 <input type="email" value={regCorreo} onChange={e => setRegCorreo(e.target.value)}
-                  placeholder="usuario@cormumel.cl"
+                  placeholder="ejemplo: usuario@gmail.com o usuario@cormumel.cl"
                   className="w-full input-field bg-gray-50/50 font-medium text-sm" required />
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Se aceptan correos personales (Gmail, Hotmail, Outlook) o institucionales (@cormumel.cl). Podrás actualizarlo a @cormumel.cl en cualquier momento.
+                </p>
               </div>
 
               <div>
@@ -2201,7 +2213,12 @@ const GestionFuncionariosView = ({ userData }) => {
                     {sc.label}
                   </span>
                 </div>
-                <p className="text-sm font-mono text-gray-400 mt-1">{selectedFunc.rut}</p>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mt-1 flex-wrap">
+                  <span className="font-mono">{selectedFunc.rut}</span>
+                  <span>•</span>
+                  <span className="text-gray-600 font-sans font-semibold">{selectedFunc.correoInstitucional || selectedFunc.correo || 'Sin correo'}</span>
+                </div>
+
                 <div className="flex flex-wrap items-center gap-2 mt-3">
                   <span className="text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-xl font-bold">{selectedFunc.tipoPrestador || 'Prestador'}</span>
                   {selectedFunc.categoria && (
@@ -2212,6 +2229,17 @@ const GestionFuncionariosView = ({ userData }) => {
                   )}
                   {selectedFunc.tipoContrato && (
                     <span className="text-xs bg-emerald-50 text-emerald-600 px-3 py-1 rounded-xl font-bold">{selectedFunc.tipoContrato}</span>
+                  )}
+
+                  {/* Email Domain Badge */}
+                  {isInstitutionalEmail(selectedFunc.correoInstitucional || selectedFunc.correo) ? (
+                    <span className="text-xs bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-xl font-bold flex items-center gap-1">
+                      <CheckCircle2 size={13} /> Correo Institucional (@cormumel.cl)
+                    </span>
+                  ) : (
+                    <span className="text-xs bg-amber-50 text-amber-800 border border-amber-200 px-3 py-1 rounded-xl font-bold flex items-center gap-1" title="Se puede vincular un correo @cormumel.cl en cualquier momento editando el expediente">
+                      <Mail size={13} /> Correo Personal / Externo
+                    </span>
                   )}
                 </div>
               </div>
