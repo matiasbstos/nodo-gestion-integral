@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Clock, MapPin, ChevronLeft, ChevronRight, Info, X, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, ChevronLeft, ChevronRight, Info, X, Loader2, Calculator, TrendingUp, Receipt, CheckCircle2 } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { calcularProyeccionTurno } from '../utils/escalaRemuneraciones';
 
 const FuncionarioTurnosView = ({ userData }) => {
   const [turnos, setTurnos] = useState([]);
@@ -75,16 +76,27 @@ const FuncionarioTurnosView = ({ userData }) => {
     }
   };
 
-  const handleAcceptTurno = async (turnoId) => {
+  const [selectedShiftToAccept, setSelectedShiftToAccept] = useState(null);
+
+  const confirmAcceptTurno = async () => {
+    if (!selectedShiftToAccept) return;
     setSubmitting(true);
     try {
+      const proyeccion = calcularProyeccionTurno(selectedShiftToAccept, userData);
       const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
-      await updateDoc(doc(db, 'turnos', turnoId), {
-        estado: 'programado', // O 'confirmado' según lógica de negocio
-        fechaAceptacion: serverTimestamp()
+
+      await updateDoc(doc(db, 'turnos', selectedShiftToAccept.id), {
+        estado: 'programado',
+        aceptado: true,
+        fechaAceptacion: serverTimestamp(),
+        brutoProyectado: proyeccion.brutoTotal,
+        netoProyectado: proyeccion.netoEstimado,
+        retencionSII: proyeccion.retencionSII
       });
-      setTurnos(prev => prev.map(t => t.id === turnoId ? { ...t, estado: 'programado' } : t));
-      alert('Turno aceptado con éxito. ¡Buen turno!');
+
+      setTurnos(prev => prev.map(t => t.id === selectedShiftToAccept.id ? { ...t, estado: 'programado', aceptado: true } : t));
+      setSelectedShiftToAccept(null);
+      alert('¡Turno aceptado con éxito! Se ha habilitado la opción para iniciar la jornada.');
     } catch (err) {
       console.error(err);
       alert('Error al aceptar el turno: ' + err.message);
@@ -187,11 +199,11 @@ const FuncionarioTurnosView = ({ userData }) => {
                           Rechazar
                         </button>
                         <button 
-                          onClick={() => handleAcceptTurno(turno.id)}
+                          onClick={() => setSelectedShiftToAccept(turno)}
                           disabled={submitting}
                           className="px-4 py-2 bg-primary text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-primary-dark transition-all shadow-md shadow-primary/20"
                         >
-                          Aceptar Turno
+                          Revisar & Aceptar Turno
                         </button>
                       </div>
                     ) : estaCancelado ? (
@@ -270,6 +282,118 @@ const FuncionarioTurnosView = ({ userData }) => {
           </div>
         </div>
       )}
+
+      {/* ════════════════════════════════════════════════════════════════════════════
+          MODAL DE ACEPTACIÓN & PROYECCIÓN FINANCIERA DEL TURNO
+         ════════════════════════════════════════════════════════════════════════════ */}
+      {selectedShiftToAccept && (() => {
+        const proyeccion = calcularProyeccionTurno(selectedShiftToAccept, userData);
+        const fechaStr = selectedShiftToAccept.inicio
+          ? new Date(selectedShiftToAccept.inicio).toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+          : 'Fecha de turno programado';
+
+        return (
+          <div className="fixed inset-0 bg-secondary/80 backdrop-blur-md z-[110] flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-lg rounded-[36px] shadow-2xl p-6 md:p-8 space-y-6 border border-gray-100 animate-scale-up font-sans">
+              
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center font-bold">
+                    <Calculator size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-secondary text-base">Aceptación & Proyección de Turno</h3>
+                    <p className="text-xs text-gray-400 capitalize">{fechaStr}</p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedShiftToAccept(null)} className="text-gray-400 hover:text-secondary p-2 rounded-xl">
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Info Box */}
+              <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-400 font-bold uppercase">Centro de Salud:</span>
+                  <span className="font-bold text-secondary">{selectedShiftToAccept.centroSalud || 'SAR Arpillerista'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400 font-bold uppercase">Función / Rol:</span>
+                  <span className="font-bold text-primary">{proyeccion.rolLabel} (Cat {proyeccion.categoria})</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400 font-bold uppercase">Horas Estimadas:</span>
+                  <span className="font-mono font-bold text-secondary">{proyeccion.horasTotales} hrs</span>
+                </div>
+              </div>
+
+              {/* Financial Breakdown Box */}
+              <div className="bg-gradient-to-br from-emerald-50/70 via-white to-gray-50 p-5 rounded-2xl border border-emerald-200/80 space-y-4">
+                <div className="flex items-center gap-2 text-emerald-800 font-extrabold text-xs uppercase tracking-wider">
+                  <TrendingUp size={16} />
+                  1. Proyección de Ganancias del Turno
+                </div>
+
+                <div className="space-y-1.5 text-xs text-gray-600 pl-1">
+                  <div className="flex justify-between">
+                    <span>Horas Hábiles (${proyeccion.valorHab.toLocaleString()}/h):</span>
+                    <span className="font-mono font-bold text-secondary">${proyeccion.brutoHabiles.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Horas Inhábiles/Festivas (${proyeccion.valorInh.toLocaleString()}/h):</span>
+                    <span className="font-mono font-bold text-secondary">${proyeccion.brutoInhabiles.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between pt-1 border-t border-emerald-200 font-bold text-secondary text-sm">
+                    <span>Monto Bruto Estimado del Turno:</span>
+                    <span className="font-mono font-black text-emerald-600">${proyeccion.brutoTotal.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {/* Deductions / Retención SII Box */}
+                <div className="pt-3 border-t border-emerald-200/60 space-y-2">
+                  <div className="flex items-center gap-2 text-amber-800 font-extrabold text-xs uppercase tracking-wider">
+                    <Receipt size={16} />
+                    2. Descuentos Pertinentes (Boleta de Honorarios)
+                  </div>
+
+                  <div className="flex justify-between text-xs text-rose-600 font-medium pl-1">
+                    <span>Retención Legal SII ({proyeccion.porcentajeRetencion}):</span>
+                    <span className="font-mono font-bold">-${proyeccion.retencionSII.toLocaleString()}</span>
+                  </div>
+
+                  <div className="p-3.5 bg-white rounded-2xl border border-emerald-300 flex justify-between items-center text-xs shadow-sm">
+                    <span className="font-extrabold text-secondary uppercase">Monto Neto Estimado a Recibir:</span>
+                    <span className="font-mono font-black text-emerald-700 text-lg">${proyeccion.netoEstimado.toLocaleString()}</span>
+                  </div>
+
+                  <p className="text-[10px] text-gray-400 italic leading-tight pt-1">
+                    * Nota: Descuentos legales aplicables al momento de emisión de la boleta de honorarios mensual.
+                  </p>
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex items-center gap-3 pt-2">
+                <button 
+                  onClick={() => setSelectedShiftToAccept(null)}
+                  className="flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={confirmAcceptTurno}
+                  disabled={submitting}
+                  className="flex-1 btn-primary py-3.5 text-xs font-bold uppercase tracking-wider rounded-2xl shadow-xl shadow-primary/20 flex items-center justify-center gap-2"
+                >
+                  {submitting ? <Loader2 className="animate-spin" /> : <><CheckCircle2 size={16} /> Confirmar & Aceptar Turno</>}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

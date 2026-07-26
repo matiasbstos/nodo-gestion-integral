@@ -58,3 +58,51 @@ export const getInfoRolFuncion = (rolLabel = '') => {
     ...tarifas
   };
 };
+
+/**
+ * Calcula la proyección financiera completa de un turno (Monto Bruto, Retención SII 14.5% y Monto Neto)
+ */
+export const calcularProyeccionTurno = (turno = {}, userData = {}) => {
+  const rolLabel = turno.tipoTurno || turno.rolTurno || userData?.tipoPrestador || 'Administrativo';
+  const infoRol = getInfoRolFuncion(rolLabel);
+  const cat = turno.categoria || infoRol.categoria || userData?.categoria || 'E';
+  
+  const valorHab = Number(turno.valorHoraNormal) || infoRol.valorHoraNormal;
+  const valorInh = Number(turno.valorHoraFestivo) || infoRol.valorHoraFestivo;
+  
+  const horasTotales = Number(turno.horas) || 15;
+  const esFestivo = turno.esFestivo || turno.esInhabil || false;
+
+  let brutoHabiles = 0;
+  let brutoInhabiles = 0;
+
+  if (esFestivo) {
+    brutoInhabiles = horasTotales * valorInh;
+  } else {
+    // Estimación estándar Turno 1 (17:00 - 08:00h): 8 hrs habiles + 7 hrs inhábiles
+    brutoHabiles = Math.min(8, horasTotales) * valorHab;
+    brutoInhabiles = Math.max(0, horasTotales - 8) * valorInh;
+  }
+
+  const brutoTotal = brutoHabiles + brutoInhabiles;
+  
+  // Retención de Impuesto a los Honorarios SII (14.5% vigente)
+  const porcentajeRetencionVal = 0.145; // 14.5%
+  const retencionSII = Math.round(brutoTotal * porcentajeRetencionVal);
+  const netoEstimado = brutoTotal - retencionSII;
+
+  return {
+    rolLabel: infoRol.rolLabel,
+    categoria: cat,
+    descripcionCategoria: infoRol.descripcion,
+    horasTotales,
+    valorHab,
+    valorInh,
+    brutoHabiles,
+    brutoInhabiles,
+    brutoTotal,
+    porcentajeRetencion: '14.5%',
+    retencionSII,
+    netoEstimado
+  };
+};
