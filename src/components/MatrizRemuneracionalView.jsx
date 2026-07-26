@@ -445,8 +445,8 @@ const MatrizRemuneracionalView = ({ userData }) => {
             <h3 className="font-bold text-secondary text-sm">
               Categoría {activeTab} — {currentCatInfo.descripcion}
             </h3>
-            <p className="text-xs text-gray-500">
-              Tarifa estimada referencial SAR: <strong className="text-emerald-600 font-mono font-bold">${currentCatInfo.valorHoraNormal.toLocaleString()} / hr</strong> (Hora Hábil e Inhábil).
+            <p className="text-xs text-gray-500 mt-0.5">
+              Tarifa estimada SAR: <strong className="text-emerald-600 font-mono font-bold">Hábil: ${currentCatInfo.valorHoraNormal.toLocaleString()}/hr</strong> | <strong className="text-violet-600 font-mono font-bold">Inhábil: ${currentCatInfo.valorHoraFestivo.toLocaleString()}/hr</strong>
             </p>
           </div>
         </div>
@@ -457,7 +457,7 @@ const MatrizRemuneracionalView = ({ userData }) => {
             className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 self-start md:self-auto"
           >
             <Zap size={14} className="text-amber-500 fill-amber-400" />
-            Rellenar Nivel 15 al 1 con ${currentCatInfo.valorHoraNormal.toLocaleString()}
+            Autorrellenar Nivel 15 al 1 (Hábil ${currentCatInfo.valorHoraNormal.toLocaleString()} / Inhábil ${currentCatInfo.valorHoraFestivo.toLocaleString()})
           </button>
         )}
       </div>
