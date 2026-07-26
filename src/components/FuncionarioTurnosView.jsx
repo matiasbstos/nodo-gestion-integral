@@ -194,6 +194,11 @@ const FuncionarioTurnosView = ({ userData }) => {
   const [cancelCategory, setCancelCategory] = useState(MOTIVOS_CANCELACION[0]);
   const [cancelReason, setCancelReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [notificationModal, setNotificationModal] = useState(null);
+
+  const showNotify = (message, title = 'Notificación NODO', type = 'success') => {
+    setNotificationModal({ message, title, type });
+  };
 
   const handleCancelTurno = async () => {
     if (!showCancelModal) return;
@@ -228,10 +233,10 @@ const FuncionarioTurnosView = ({ userData }) => {
 
       setShowCancelModal(null);
       setCancelReason('');
-      alert('Turno cancelado/rechazado. El motivo ha sido registrado correctamente en la Auditoría.');
+      showNotify('Turno cancelado/rechazado. El motivo ha sido registrado correctamente en la Bitácora de Auditoría.', 'Turno Cancelado', 'warning');
     } catch (err) {
       console.error(err);
-      alert('Error al procesar la cancelación: ' + err.message);
+      showNotify('Error al procesar la cancelación: ' + err.message, 'Error al Cancelar', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -257,10 +262,10 @@ const FuncionarioTurnosView = ({ userData }) => {
 
       setTurnos(prev => prev.map(t => t.id === selectedShiftToAccept.id ? { ...t, estado: 'programado', aceptado: true } : t));
       setSelectedShiftToAccept(null);
-      alert('¡Turno aceptado con éxito! Se ha habilitado la opción para iniciar la jornada.');
+      showNotify('¡Turno aceptado con éxito! Se ha habilitado la opción para iniciar la jornada.', 'Turno Confirmado', 'success');
     } catch (err) {
       console.error(err);
-      alert('Error al aceptar el turno: ' + err.message);
+      showNotify('Error al aceptar el turno: ' + err.message, 'Error al Aceptar', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -635,6 +640,47 @@ const FuncionarioTurnosView = ({ userData }) => {
           </div>
         );
       })()}
+
+      {/* ════════════════════════════════════════════════════════════════════════════
+          MODAL DE NOTIFICACIÓN DEL SISTEMA NODO (CENTRADOS)
+         ════════════════════════════════════════════════════════════════════════════ */}
+      {notificationModal && (
+        <div className="fixed inset-0 bg-secondary/80 backdrop-blur-md z-[300] flex items-center justify-center p-4 animate-fade-in font-sans">
+          <div className="bg-white rounded-[36px] p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 text-center space-y-6 animate-scale-up">
+            <div className={`w-20 h-20 rounded-3xl mx-auto flex items-center justify-center shadow-lg ${
+              notificationModal.type === 'error'
+                ? 'bg-rose-100 text-rose-600 shadow-rose-200 border border-rose-200'
+                : notificationModal.type === 'warning'
+                ? 'bg-amber-100 text-amber-600 shadow-amber-200 border border-amber-200'
+                : 'bg-emerald-100 text-emerald-600 shadow-emerald-200 border border-emerald-200'
+            }`}>
+              {notificationModal.type === 'error' ? (
+                <AlertCircle size={38} />
+              ) : notificationModal.type === 'warning' ? (
+                <AlertTriangle size={38} />
+              ) : (
+                <CheckCircle2 size={38} />
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-secondary tracking-tight">
+                {notificationModal.title || 'Notificación del Sistema'}
+              </h3>
+              <p className="text-sm text-gray-500 font-semibold leading-relaxed">
+                {notificationModal.message}
+              </p>
+            </div>
+
+            <button
+              onClick={() => setNotificationModal(null)}
+              className="w-full btn-primary py-4 text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+            >
+              Entendido & Continuar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

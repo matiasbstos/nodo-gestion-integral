@@ -320,6 +320,12 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
 
   const targetTurno = currentTurnoHoy || todosLosTurnos.find(t => t.estado === 'programado' || t.aceptado) || todosLosTurnos[0];
 
+  const [notificationModal, setNotificationModal] = React.useState(null);
+
+  const showNotify = (message, title = 'Notificación NODO', type = 'success') => {
+    setNotificationModal({ message, title, type });
+  };
+
   const handleStartShift = async () => {
     // INTERCEPCIÓN TUTORIAL: Cortocircuito temprano para evitar lógica real
     if (userData?.modoPruebaActivo && pasoTutorial === 2) {
@@ -327,14 +333,14 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
       setIsShiftActive(true);
       setEntryTime(new Date());
       setPasoTutorial(3);
-      alert("Simulacro: Entrada marcada correctamente. ¡Buen turno!");
+      showNotify("Simulacro: Entrada marcada correctamente. ¡Buen turno!", "Entrada Registrada", "success");
       return;
     }
 
     const turnoToStart = targetTurno;
 
     if (!turnoToStart) {
-      return alert("No tienes ningún turno aceptado en tu agenda.");
+      return showNotify("No tienes ningún turno aceptado en tu agenda.", "Sin Turno Activo", "warning");
     }
     
     try {
@@ -342,7 +348,7 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
         setMockShift(prev => ({ ...prev, estado: 'en_curso', entradaReal: Timestamp.now() }));
         setIsShiftActive(true);
         setEntryTime(new Date());
-        alert("Entrada marcada correctamente en Modo Prueba.");
+        showNotify("Entrada marcada correctamente en Modo Prueba.", "Modo Prueba", "success");
         return;
       }
 
@@ -353,10 +359,10 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
       });
       setEntryTime(new Date());
       setIsShiftActive(true);
-      alert("Entrada marcada correctamente. ¡Buen turno!");
+      showNotify("Entrada marcada correctamente. ¡Buen turno!", "Entrada Registrada", "success");
     } catch (err) {
       console.error(err);
-      alert("Error al marcar entrada: " + err.message);
+      showNotify("Error al marcar entrada: " + err.message, "Error en Marcaje", "error");
     }
   };
 
@@ -368,7 +374,7 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
       setEntryTime(null);
       setElapsedTime('00:00:00');
       setPasoTutorial(6); // SALTO A LA BARRA LATERAL
-      alert("¡Marcaje de prueba finalizado! Las horas han sido computadas.");
+      showNotify("¡Marcaje de prueba finalizado! Las horas han sido computadas.", "Jornada Finalizada", "success");
       return;
     }
 
@@ -385,10 +391,10 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
       setIsShiftActive(false);
       setEntryTime(null);
       setElapsedTime('00:00:00');
-      alert(instant ? "¡Turno finalizado inmediatamente! Las horas se computaron al informe." : "Turno finalizado correctamente.");
+      showNotify(instant ? "¡Turno finalizado inmediatamente! Las horas se computaron al informe." : "Turno finalizado correctamente.", "Salida Registrada", "success");
     } catch (err) {
       console.error(err);
-      alert("Error al marcar salida.");
+      showNotify("Error al marcar salida.", "Error en Marcaje", "error");
     }
   };
 
@@ -397,7 +403,7 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
     // INTERCEPCIÓN TUTORIAL: Ausencia (Paso 3)
     if (userData?.modoPruebaActivo && pasoTutorial === 3 && tipoAccion === 'ausencia') {
       setPasoTutorial(4);
-      alert("Simulacro: Reporte de ausencia enviado correctamente.");
+      showNotify("Simulacro: Reporte de ausencia enviado correctamente.", "Ausencia Registrada", "info");
       return;
     }
 
@@ -423,20 +429,20 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
           if (!pasoTutorial) {
             const userRef = doc(db, 'usuarios', userData.uid || userData.id);
             await updateDoc(userRef, { modoPruebaActivo: false });
-            alert('Prueba enviada con éxito. El modo de prueba ha sido desactivado.');
+            showNotify('Prueba enviada con éxito. El modo de prueba ha sido desactivado.', 'Modo Prueba Finalizado', 'success');
           } else {
-            alert(`Simulacro: Registro de ${tipoAccion} enviado correctamente.`);
+            showNotify(`Simulacro: Registro de ${tipoAccion} enviado correctamente.`, 'Simulacro GPS', 'success');
           }
         } else {
-          alert(`Prueba enviada con éxito. Registro de ${tipoAccion} capturado.`);
+          showNotify(`Prueba enviada con éxito. Registro de ${tipoAccion} capturado.`, 'Prueba GPS', 'success');
         }
       }, (err) => {
-        alert("Error al capturar ubicación para la prueba: " + err.message);
+        showNotify("Error al capturar ubicación para la prueba: " + err.message, "Error GPS", "error");
       }, { enableHighAccuracy: true });
 
     } catch (err) {
       console.error(err);
-      alert("Error en el motor de pruebas.");
+      showNotify("Error en el motor de pruebas.", "Error de Motor", "error");
     }
   };
 
@@ -449,9 +455,9 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
       await setDoc(doc(db, 'configuracion', 'ubicacion_central'), { lat, lng });
       setCenterLocation({ lat, lng });
       setShowConfig(false);
-      alert("Ubicación actualizada correctamente.");
+      showNotify("Ubicación actualizada correctamente.", "Ubicación Central", "success");
     } catch (err) {
-      alert("Error al actualizar la ubicación.");
+      showNotify("Error al actualizar la ubicación.", "Error de Configuración", "error");
     }
   };
 
@@ -461,7 +467,7 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
     setShowAbsenceModal(false);
     setAbsenceReason('');
     setSelectedShiftForAbsence('');
-    alert("Ausencia justificada con éxito.");
+    showNotify("Ausencia justificada con éxito.", "Ausencia Justificada", "success");
   };
 
   const [selectedShiftToAccept, setSelectedShiftToAccept] = React.useState(null);
@@ -471,7 +477,7 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
     const tipoNovedad = (shift?.tipoNovedad || shift?.motivoNovedad || '').toLowerCase();
     
     if (['licencia', 'vacaciones', 'permiso', 'ausente'].includes(estado) || tipoNovedad.includes('licencia') || tipoNovedad.includes('vacaciones') || tipoNovedad.includes('permiso')) {
-      alert("🔒 Este turno se encuentra eximido y justificado por la Administración (Licencia Médica, Vacaciones o Permiso Administrativo). No requiere ni permite ser aceptado por el funcionario.");
+      showNotify("🔒 Este turno se encuentra eximido y justificado por la Administración (Licencia Médica, Vacaciones o Permiso Administrativo). No requiere ni permite ser aceptado por el funcionario.", "Turno Justificado", "warning");
       return;
     }
     setSelectedShiftToAccept(shift);
@@ -488,7 +494,7 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
         setActiveTab('scheduled');
         if (pasoTutorial === 1) setPasoTutorial(2);
         setSelectedShiftToAccept(null);
-        alert("Simulacro: Turno aceptado con éxito. Se ha integrado a tu agenda de prueba.");
+        showNotify("Simulacro: Turno aceptado con éxito. Se ha integrado a tu agenda de prueba.", "Turno Aceptado", "success");
         return;
       }
 
@@ -504,10 +510,10 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
       });
 
       setSelectedShiftToAccept(null);
-      alert("¡Turno aceptado con éxito! Se ha habilitado la opción para iniciar la jornada.");
+      showNotify("¡Turno aceptado con éxito! Se ha habilitado la opción para iniciar la jornada.", "Turno Confirmado", "success");
     } catch (err) {
       console.error(err);
-      alert("Error al aceptar el turno: " + err.message);
+      showNotify("Error al aceptar el turno: " + err.message, "Error al Confirmar", "error");
     }
   };
 
@@ -1226,6 +1232,47 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
           </div>
         );
       })()}
+
+      {/* ════════════════════════════════════════════════════════════════════════════
+          MODAL DE NOTIFICACIÓN DEL SISTEMA NODO (CENTRADOS)
+         ════════════════════════════════════════════════════════════════════════════ */}
+      {notificationModal && (
+        <div className="fixed inset-0 bg-secondary/80 backdrop-blur-md z-[300] flex items-center justify-center p-4 animate-fade-in font-sans">
+          <div className="bg-white rounded-[36px] p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 text-center space-y-6 animate-scale-up">
+            <div className={`w-20 h-20 rounded-3xl mx-auto flex items-center justify-center shadow-lg ${
+              notificationModal.type === 'error'
+                ? 'bg-rose-100 text-rose-600 shadow-rose-200 border border-rose-200'
+                : notificationModal.type === 'warning'
+                ? 'bg-amber-100 text-amber-600 shadow-amber-200 border border-amber-200'
+                : 'bg-emerald-100 text-emerald-600 shadow-emerald-200 border border-emerald-200'
+            }`}>
+              {notificationModal.type === 'error' ? (
+                <AlertCircle size={38} />
+              ) : notificationModal.type === 'warning' ? (
+                <ShieldAlert size={38} />
+              ) : (
+                <CheckCircle2 size={38} />
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-secondary tracking-tight">
+                {notificationModal.title || 'Notificación del Sistema'}
+              </h3>
+              <p className="text-sm text-gray-500 font-semibold leading-relaxed">
+                {notificationModal.message}
+              </p>
+            </div>
+
+            <button
+              onClick={() => setNotificationModal(null)}
+              className="w-full btn-primary py-4 text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+            >
+              Entendido & Continuar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
