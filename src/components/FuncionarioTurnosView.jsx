@@ -273,6 +273,24 @@ const FuncionarioTurnosView = ({ userData }) => {
     }
   };
 
+  const handleDeleteSingleTestShift = async (shiftId) => {
+    if (!window.confirm("🗑️ ¿Deseas eliminar este turno de prueba de la base de datos?")) return;
+    try {
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, 'turnos', shiftId));
+      await logAuditAction(db, {
+        usuario: userData,
+        accion: 'ELIMINACION_TURNO_PRUEBA_INDIVIDUAL',
+        detalles: `Turno de prueba individual eliminado ID ${shiftId}`,
+        categoria: 'pauta'
+      });
+      showNotify("El registro de prueba fue eliminado correctamente.", "Registro Eliminado", "success");
+    } catch (err) {
+      console.error(err);
+      showNotify("Error al eliminar registro: " + err.message, "Error", "error");
+    }
+  };
+
   const handlePrevMonth = () => {
     setCurrentMonthDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
   };
@@ -589,6 +607,16 @@ const FuncionarioTurnosView = ({ userData }) => {
                         >
                           Rechazar / Cancelar
                         </button>
+
+                        {(userData?.role === 'admin_global' || userData?.role === 'admin_local' || userData?.modoPruebaActivo || turno.esPrueba || turno.modoPrueba) && (
+                          <button
+                            onClick={() => handleDeleteSingleTestShift(turno.id)}
+                            className="px-2.5 py-1 text-[10px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition-all flex items-center gap-1"
+                            title="Eliminar este turno de prueba específico de la base de datos"
+                          >
+                            🗑️ Eliminar Registro
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

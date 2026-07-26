@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Settings, X, Info, AlertTriangle, CheckCircle, Menu, FlaskConical } from 'lucide-react';
+import { Bell, Settings, X, Info, AlertTriangle, CheckCircle, Menu, FlaskConical, Trash2 } from 'lucide-react';
 
 const Topbar = ({ currentViewTitle, userName, userRole, userData, onOpenMenu }) => {
   const [showNotifications, setShowNotifications] = React.useState(false);
@@ -22,6 +22,46 @@ const Topbar = ({ currentViewTitle, userName, userRole, userData, onOpenMenu }) 
       });
     } catch (err) {
       console.error("Error toggling modo prueba:", err);
+    }
+  };
+
+  const handlePurgeAllTestData = async () => {
+    if (!window.confirm("🗑️ ¿Estás seguro de que deseas ELIMINAR TODOS LOS DATOS DE PRUEBA del sistema?\n\nEsta acción borrará únicamente turnos y marcajes simulados creados durante la prueba.")) return;
+
+    try {
+      const { collection, getDocs, deleteDoc, doc, updateDoc } = await import('firebase/firestore');
+      const { db } = await import('../firebase');
+
+      // Purge test turnos
+      const turnosSnap = await getDocs(collection(db, 'turnos'));
+      const testDocs = turnosSnap.docs.filter(d => {
+        const data = d.data();
+        return data.esPrueba || data.modoPrueba || data.esSimulado || data.id === 'mock-123';
+      });
+
+      for (const d of testDocs) {
+        await deleteDoc(doc(db, 'turnos', d.id));
+      }
+
+      // Purge test gps audit
+      try {
+        const gpsSnap = await getDocs(collection(db, 'auditoria_gps_pruebas'));
+        for (const d of gpsSnap.docs) {
+          await deleteDoc(doc(db, 'auditoria_gps_pruebas', d.id));
+        }
+      } catch (e) {}
+
+      // Deactivate test mode
+      if (userData?.uid || userData?.id) {
+        await updateDoc(doc(db, 'usuarios', userData.uid || userData.id), {
+          modoPruebaActivo: false
+        });
+      }
+
+      alert("¡Todos los datos de prueba fueron eliminados con éxito!");
+    } catch (err) {
+      console.error(err);
+      alert("Error al limpiar datos de prueba: " + err.message);
     }
   };
 
@@ -54,18 +94,29 @@ const Topbar = ({ currentViewTitle, userName, userRole, userData, onOpenMenu }) 
 
       <div className="flex items-center gap-4">
         {isAdmin && (
-          <button
-            onClick={handleToggleModoPrueba}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${
-              userData?.modoPruebaActivo
-                ? 'bg-purple-100 text-purple-900 border-purple-300 shadow-sm animate-pulse'
-                : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'
-            }`}
-            title="Activar / Desactivar Modo Prueba (Exclusivo Administradores)"
-          >
-            <FlaskConical size={14} className={userData?.modoPruebaActivo ? 'text-purple-600' : 'text-gray-400'} />
-            <span className="hidden sm:inline">{userData?.modoPruebaActivo ? 'Modo Prueba: ON' : 'Modo Prueba: OFF'}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleToggleModoPrueba}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${
+                userData?.modoPruebaActivo
+                  ? 'bg-purple-100 text-purple-900 border-purple-300 shadow-sm animate-pulse'
+                  : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'
+              }`}
+              title="Activar / Desactivar Modo Prueba (Exclusivo Administradores)"
+            >
+              <FlaskConical size={14} className={userData?.modoPruebaActivo ? 'text-purple-600' : 'text-gray-400'} />
+              <span className="hidden sm:inline">{userData?.modoPruebaActivo ? 'Modo Prueba: ON' : 'Modo Prueba: OFF'}</span>
+            </button>
+
+            <button
+              onClick={handlePurgeAllTestData}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all flex items-center gap-1.5"
+              title="Eliminar todos los datos y registros de prueba generados"
+            >
+              <Trash2 size={14} />
+              <span className="hidden md:inline">Limpiar Pruebas</span>
+            </button>
+          </div>
         )}
 
         <div className="relative">
