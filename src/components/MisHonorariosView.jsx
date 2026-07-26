@@ -13,15 +13,19 @@ import {
   ArrowRight,
   TrendingUp,
   MapPin,
-  Info
+  Info,
+  Printer,
+  ChevronLeft
 } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import InformeHonorariosPrint from './InformeHonorariosPrint';
 
 const MisHonorariosView = ({ userData }) => {
   const [asistencias, setAsistencias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mesSeleccionado, setMesSeleccionado] = useState(new Date().getMonth());
+  const [showPrintView, setShowPrintView] = useState(false);
   const [firmaStatus, setFirmaStatus] = useState({
     prestador: false,
     jefe: false,
@@ -101,6 +105,69 @@ const MisHonorariosView = ({ userData }) => {
     </div>
   );
 
+  // Calculations for Print View
+  let horasLuVi = 0;
+  let horasSaDoFest = 0;
+  asistencias.forEach(a => {
+    if (a.fecha) {
+      const dayOfWeek = a.fecha.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const hrs = Number(a.horasValidadas) || 0;
+      if (isWeekend) horasSaDoFest += hrs;
+      else horasLuVi += hrs;
+    }
+  });
+
+  const tarifaBase = userData?.valorHora || 21000;
+
+  if (showPrintView) {
+    return (
+      <div className="p-8 max-w-7xl mx-auto space-y-6 animate-fade-in">
+        <div className="flex items-center justify-between print:hidden">
+          <button
+            onClick={() => setShowPrintView(false)}
+            className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors bg-white px-4 py-2.5 rounded-2xl border border-gray-100 shadow-sm"
+          >
+            <ChevronLeft size={18} /> Volver a Mis Honorarios
+          </button>
+        </div>
+
+        <InformeHonorariosPrint
+          funcionario={{
+            nombre: userData?.nombre || 'Funcionario',
+            rut: userData?.rut || '',
+            cargo: userData?.tipoPrestador || 'Médico Cirujano',
+            lugar: userData?.centroAsignado || 'SAR'
+          }}
+          periodo="JUNIO 2026"
+          resumenHoras={{
+            valorHoraLuVi: tarifaBase,
+            horasLuVi: horasLuVi,
+            valorHoraSaDoFest: tarifaBase,
+            horasSaDoFest: horasSaDoFest,
+            valorMensual: 0,
+            diasTrabajados: 0
+          }}
+          datosBancarios={{
+            tipoCuenta: userData?.tipoCuenta || 'Cuenta Corriente',
+            banco: userData?.banco || 'Banco de Chile',
+            numeroCuenta: userData?.numeroCuenta || '',
+            telefono: userData?.telefono || '',
+            email: userData?.correoInstitucional || userData?.email || ''
+          }}
+          actividades={[
+            'CONTROL DE SIGNOS VITALES.',
+            'TOMA DE ELECTROCARDIOGRAMAS.',
+            'ADMINISTRACION DE MEDICAMENTOS VIA ORAL, IM, EV.',
+            'CURACIONES.',
+            'TRASLADOS DE PACIENTES CRITICOS A HOSPITAL SAN JOSE DE MELIPILLA.'
+          ]}
+          allowEdit={true}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="p-8 max-w-[1600px] mx-auto space-y-8 animate-fade-in">
       {/* Header */}
@@ -120,9 +187,12 @@ const MisHonorariosView = ({ userData }) => {
             <option value={3}>Abril 2026</option>
           </select>
           <div className="h-6 w-px bg-gray-100"></div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-secondary-dark transition-all">
+          <button 
+            onClick={() => setShowPrintView(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-secondary-dark transition-all"
+          >
             <Download size={14} />
-            PDF
+            PDF / Informe
           </button>
         </div>
       </div>
@@ -156,13 +226,19 @@ const MisHonorariosView = ({ userData }) => {
             </div>
 
             <div className="mt-8 space-y-3">
-              <button className="w-full py-4 bg-primary text-white rounded-2xl font-bold uppercase tracking-[2px] shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-3">
+              <button 
+                onClick={() => setShowPrintView(true)}
+                className="w-full py-4 bg-primary text-white rounded-2xl font-bold uppercase tracking-[2px] shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
+              >
                 <PenTool size={20} />
-                Firmar Informe Mayo
+                Firmar e Imprimir Informe
               </button>
-              <button className="w-full py-4 bg-white text-secondary border border-gray-100 rounded-2xl font-bold uppercase tracking-[2px] hover:bg-gray-50 transition-all flex items-center justify-center gap-3">
+              <button 
+                onClick={() => setShowPrintView(true)}
+                className="w-full py-4 bg-white text-secondary border border-gray-100 rounded-2xl font-bold uppercase tracking-[2px] hover:bg-gray-50 transition-all flex items-center justify-center gap-3"
+              >
                 <FileText size={20} />
-                Previsualizar Borrador
+                Previsualizar Informe (PDF)
               </button>
             </div>
             

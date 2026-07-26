@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Users, Search, Plus, X, ChevronLeft, ChevronRight, User, Calendar,
-  AlertTriangle, Wallet, Loader2, Info,
+  AlertTriangle, Wallet, Loader2, Info, Printer,
   ShieldCheck, Mail, Stethoscope, Umbrella, Timer, Briefcase,
   Clock, FileText, Building2, Phone, Hash, CreditCard, Edit3, Save, Check,
   Camera, Trash2, Power, ZoomIn, ZoomOut, Upload, Crop,
@@ -13,6 +13,7 @@ import {
   doc, setDoc, getDoc, addDoc, deleteDoc, Timestamp, serverTimestamp
 } from 'firebase/firestore';
 import { calcularHorasTurno } from '../utils/timeUtils';
+import InformeHonorariosPrint from './InformeHonorariosPrint';
 
 // ─── Shift & Schedule Definitions ─────────────────────────────────────────────
 
@@ -133,6 +134,7 @@ const STATUS_CONFIG = {
 const TABS = [
   { id: 'perfil',        label: 'Perfil Personal', icon: User          },
   { id: 'turnos',        label: 'Turnos Asignados', icon: Calendar     },
+  { id: 'informe',       label: 'Informe de Prestación (PDF)', icon: Printer },
   { id: 'marcaje',       label: 'Marcaje / Asistencia', icon: Timer    },
   { id: 'licencias',     label: 'Licencias Médicas', icon: Stethoscope },
   { id: 'vacaciones',    label: 'Vacaciones & Permisos', icon: Umbrella },
@@ -1831,6 +1833,67 @@ const GestionFuncionariosView = ({ userData }) => {
                   ))}
                 </div>
           }
+        </div>
+      );
+    }
+
+    if (activeTab === 'informe') {
+      const funcTurns = tabData.turnos || [];
+
+      let horasLuVi = 0;
+      let horasSaDoFest = 0;
+
+      funcTurns.forEach(t => {
+        const d = t.fecha ? new Date(t.fecha + 'T12:00:00') : (t.inicio ? new Date(t.inicio) : null);
+        if (d && t.estado !== 'reemplazado') {
+          const dayOfWeek = d.getDay();
+          const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+          const hrs = Number(t.totalHoras) || (t.horasHabiles !== undefined ? (t.horasHabiles + t.horasInhabiles) : 0);
+          
+          if (isWeekend || t.nombreHorario?.includes('festivo')) {
+            horasSaDoFest += hrs;
+          } else {
+            horasLuVi += hrs;
+          }
+        }
+      });
+
+      const tarifaBase = f.valorHora || 21000;
+
+      return (
+        <div className="space-y-6">
+          <InformeHonorariosPrint
+            funcionario={{
+              nombre: f.nombre,
+              rut: f.rut || f.id,
+              cargo: f.tipoPrestador || 'Médico Cirujano',
+              lugar: f.centroAsignado || 'SAR'
+            }}
+            periodo="JUNIO 2026"
+            resumenHoras={{
+              valorHoraLuVi: tarifaBase,
+              horasLuVi: horasLuVi,
+              valorHoraSaDoFest: tarifaBase,
+              horasSaDoFest: horasSaDoFest,
+              valorMensual: 0,
+              diasTrabajados: 0
+            }}
+            datosBancarios={{
+              tipoCuenta: f.tipoCuenta || 'Cuenta Corriente',
+              banco: f.banco || 'Banco de Chile',
+              numeroCuenta: f.numeroCuenta || '',
+              telefono: f.telefono || '',
+              email: f.correoInstitucional || ''
+            }}
+            actividades={[
+              'CONTROL DE SIGNOS VITALES.',
+              'TOMA DE ELECTROCARDIOGRAMAS.',
+              'ADMINISTRACION DE MEDICAMENTOS VIA ORAL, IM, EV.',
+              'CURACIONES.',
+              'TRASLADOS DE PACIENTES CRITICOS A HOSPITAL SAN JOSE DE MELIPILLA.'
+            ]}
+            allowEdit={true}
+          />
         </div>
       );
     }
