@@ -15,12 +15,14 @@ import {
   MapPin,
   Info,
   Printer,
-  ChevronLeft
+  ChevronLeft,
+  Lock
 } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import InformeHonorariosPrint from './InformeHonorariosPrint';
 import { calcularProyeccionTurno } from '../utils/escalaRemuneraciones';
+import { logAuditAction } from '../utils/auditLogger';
 
 const MisHonorariosView = ({ userData }) => {
   const [asistencias, setAsistencias] = useState([]);
@@ -197,13 +199,60 @@ const MisHonorariosView = ({ userData }) => {
     );
   }
 
+  const [locking, setLocking] = useState(false);
+
+  const isClosedAndLocked = asistencias.length > 0 && asistencias.every(a => a.estadoCierreRRHH === 'bloqueado');
+  const isAdmin = userData?.role === 'admin_global' || userData?.role === 'admin_local' || (userData?.role || '').toLowerCase().includes('admin');
+
+  const handleLockAndVerifyPeriod = async () => {
+    if (asistencias.length === 0) {
+      alert("No hay registros en este período para verificar o bloquear.");
+      return;
+    }
+
+    if (!window.confirm(`🔒 ¿Deseas VALIDAR Y BLOQUEAR el período de corte (${corteTextoInfo}) para este funcionario?\n\nUna vez verificado y cerrado por Recursos Humanos, los turnos no podrán ser modificados a posteriori.`)) return;
+
+    setLocking(true);
+    try {
+      const { doc, updateDoc } = await import('firebase/firestore');
+
+      for (const shift of asistencias) {
+        if (shift.id) {
+          await updateDoc(doc(db, 'turnos', shift.id), {
+            estadoCierreRRHH: 'bloqueado',
+            fechaCierreRRHH: new Date().toISOString(),
+            aprobadoPorRRHH: userData?.nombre || 'Administrador RRHH'
+          });
+        }
+      }
+
+      setFirmaStatus(prev => ({ ...prev, jefe: true }));
+
+      await logAuditAction(db, {
+        usuario: userData,
+        accion: 'CIERRE_MES_RRHH_APROBADO',
+        detalles: `Recursos Humanos validó y bloqueó el período de corte (${corteTextoInfo}): Total Horas Hábiles=${horasLuVi}h, Inhábiles=${horasSaDoFest}h, Monto Bruto=$${totalMonto.toLocaleString('es-CL')}`,
+        targetFuncionario: userData,
+        categoria: 'honorarios'
+      });
+
+      alert("¡El período de corte fue verificado, aprobado y bloqueado con éxito por Recursos Humanos!");
+      setAsistencias(prev => prev.map(a => ({ ...a, estadoCierreRRHH: 'bloqueado' })));
+    } catch (err) {
+      console.error(err);
+      alert("Error al cerrar el período: " + err.message);
+    } finally {
+      setLocking(false);
+    }
+  };
+
   return (
     <div className="p-8 max-w-[1600px] mx-auto space-y-8 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-secondary tracking-tight">Mis Honorarios y Liquidación</h1>
-          <p className="text-gray-500 mt-1 flex items-center gap-2">
+          <p className="text-gray-500 mt-1 flex flex-wrap items-center gap-2">
             Transparencia financiera y firma de informes mensuales.
             <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-xl text-xs font-black uppercase tracking-wider inline-flex items-center gap-1.5 ml-2">
               <Clock size={13} /> {corteTextoInfo}
@@ -231,6 +280,39 @@ const MisHonorariosView = ({ userData }) => {
             <Download size={14} />
             PDF / Informe
           </button>
+        </div>
+      </div>
+
+      {/* Punto de Verificación y Cierre RRHH */}
+      <div className="bg-gradient-to-r from-secondary via-secondary-light to-secondary p-6 rounded-3xl text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border border-white/10">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md shrink-0">
+            <Lock size={24} className={isClosedAndLocked ? "text-emerald-400" : "text-amber-300"} />
+          </div>
+          <div>
+            <h3 className="font-extrabold text-base md:text-lg text-white flex items-center gap-2">
+              Punto de Verificación & Cierre de Corte (Recursos Humanos)
+            </h3>
+            <p className="text-xs text-gray-300 mt-0.5">
+              {corteTextoInfo}. {isClosedAndLocked ? "Este período se encuentra VERIFICADO y BLOQUEADO contra modificaciones a posteriori." : "Verifica los turnos del período. Al aprobar y cerrar, los datos quedarán protegidos contra modificaciones."}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          {isClosedAndLocked ? (
+            <span className="px-4 py-2.5 bg-emerald-500/20 border border-emerald-400 text-emerald-300 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm">
+              <CheckCircle2 size={16} /> Período Verificado y Bloqueado
+            </span>
+          ) : isAdmin ? (
+            <button
+              onClick={handleLockAndVerifyPeriod}
+              disabled={locking || asistencias.length === 0}
+              className="px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 disabled:opacity-50"
+            >
+              <Lock size={16} /> Validar y Cerrar Período de Corte
+            </button>
+          ) : null}
         </div>
       </div>
 
