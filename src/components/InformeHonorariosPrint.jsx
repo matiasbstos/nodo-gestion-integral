@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
-import { Printer, Edit3, Save, RotateCcw, Download, Check, HelpCircle } from 'lucide-react';
+import { Printer, Edit3, Save, Download } from 'lucide-react';
 
 /**
  * InformeHonorariosPrint Component
  * Exact pixel-perfect replica of "INFORME PRESTACIÓN SERVICIOS" (Page 1 and Page 2).
- * Formatted for A4 page printing with clean page breaks and print isolation.
+ * Styled with exact typography matching official specs:
+ *  - Subtitle: Myriad Pro 14pt (Italic)
+ *  - Address: Bookman Old Style 8pt (Italic)
+ *  - Main Titles: Segoe UI 20pt (Bold, Underlined)
+ *  - Metadata Fields: Calibri 11pt (Labels Bold, Values Regular)
+ *  - Signatures & Bank Details: Segoe UI 8pt (Bold / Regular)
  */
 const InformeHonorariosPrint = ({
   funcionario = {
@@ -102,6 +107,12 @@ const InformeHonorariosPrint = ({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Font Stacks
+  const FONT_SEGOE = '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
+  const FONT_MYRIAD = '"Myriad Pro", Myriad, "Segoe UI", sans-serif';
+  const FONT_BOOKMAN = '"Bookman Old Style", Bookman, Georgia, serif';
+  const FONT_CALIBRI = 'Calibri, Candara, Segoe, "Segoe UI", Optima, sans-serif';
+
   return (
     <div className="space-y-6">
       {/* Action Control Bar (Hidden when printing) */}
@@ -112,7 +123,7 @@ const InformeHonorariosPrint = ({
           </div>
           <div>
             <h3 className="font-bold text-sm tracking-tight text-white">Informe de Prestación de Servicios (Honorarios)</h3>
-            <p className="text-xs text-gray-300">Documento oficial formateado para impresión en tamaño carta / A4.</p>
+            <p className="text-xs text-gray-300">Documento oficial formateado en tipografías oficiales (Segoe UI, Calibri, Myriad Pro, Bookman Old Style).</p>
           </div>
         </div>
 
@@ -140,16 +151,16 @@ const InformeHonorariosPrint = ({
         </div>
       </div>
 
-      {/* Printable Area Wrapper with print isolation class */}
+      {/* Printable Area Wrapper */}
       <div className="printable-document-area bg-gray-200/70 p-4 md:p-8 rounded-3xl print:p-0 print:bg-white print:m-0">
         
         {/* ════════════════════════════════════════════════════════════════════════════
             PÁGINA 1: INFORME PRESTACIÓN SERVICIOS
            ════════════════════════════════════════════════════════════════════════════ */}
-        <div className="w-[210mm] min-h-[297mm] bg-white p-8 md:p-12 mx-auto mb-8 shadow-2xl print:shadow-none print:m-0 print:p-8 print:w-full font-sans text-black relative flex flex-col justify-between break-after-page">
+        <div className="w-[210mm] min-h-[297mm] bg-white p-8 md:p-12 mx-auto mb-8 shadow-2xl print:shadow-none print:m-0 print:p-8 print:w-full text-black relative flex flex-col justify-between break-after-page">
           <div>
             
-            {/* Corporación Logo Image & Letterhead Header */}
+            {/* Header: Logo & Letterhead Subtitle */}
             <div className="border-b-2 border-black pb-1 mb-1">
               <div className="flex items-start justify-between">
                 <div>
@@ -158,35 +169,49 @@ const InformeHonorariosPrint = ({
                     alt="Corporación Municipal de Melipilla" 
                     className="h-16 w-auto object-contain mb-1"
                     onError={(e) => {
-                      // Fallback if image path differs
                       e.target.onerror = null;
                       e.target.src = "/IMG/logo_corporativo.png";
                     }}
                   />
                 </div>
               </div>
-              <p className="text-xs italic text-gray-500 mt-1 font-serif">
+
+              {/* Subtitle: Myriad Pro 14pt (Italic) */}
+              <p 
+                style={{ fontFamily: FONT_MYRIAD, fontSize: '14pt' }} 
+                className="italic text-gray-700 mt-1"
+              >
                 Corporación Municipal de Melipilla
               </p>
             </div>
             
-            <p className="text-[9px] italic text-gray-400 mb-6 font-serif leading-tight">
+            {/* Address: Bookman Old Style 8pt (Italic) */}
+            <p 
+              style={{ fontFamily: FONT_BOOKMAN, fontSize: '8pt' }} 
+              className="italic text-gray-500 mb-6 leading-tight"
+            >
               Eleuterio Ramírez N°0387<br />
               Población. Manuel Rodríguez<br />
               Melipilla / Fono: 224897900
             </p>
 
-            {/* Document Main Title */}
+            {/* Main Title: Segoe UI 20pt (Bold, Underlined) */}
             <div className="text-center my-6">
-              <h1 className="text-xl font-extrabold uppercase tracking-wide text-black underline underline-offset-4 decoration-1">
+              <h1 
+                style={{ fontFamily: FONT_SEGOE, fontSize: '20pt' }} 
+                className="font-bold uppercase tracking-tight text-black underline underline-offset-4 decoration-1"
+              >
                 INFORME PRESTACIÓN SERVICIOS
               </h1>
             </div>
 
-            {/* General Info Fields (Vertical Alignment of Colons) */}
-            <div className="my-6 space-y-1.5 text-sm font-medium">
+            {/* General Info Fields: Calibri 11pt (Labels Bold 11pt, Values Regular 11pt) */}
+            <div 
+              style={{ fontFamily: FONT_CALIBRI, fontSize: '11pt' }} 
+              className="my-6 space-y-1.5 font-normal"
+            >
               <div className="flex items-center">
-                <span className="w-28 font-bold text-black uppercase text-xs tracking-wider">NOMBRE</span>
+                <span className="w-28 font-bold text-black uppercase tracking-wider">NOMBRE</span>
                 <span className="mr-2 font-bold">:</span>
                 {isEditing ? (
                   <input
@@ -196,12 +221,12 @@ const InformeHonorariosPrint = ({
                     className="border border-amber-400 bg-amber-50 px-2 py-0.5 rounded text-xs font-bold w-72"
                   />
                 ) : (
-                  <span className="font-semibold text-black">{formData.funcionarioNombre}</span>
+                  <span className="font-normal text-black">{formData.funcionarioNombre}</span>
                 )}
               </div>
 
               <div className="flex items-center">
-                <span className="w-28 font-bold text-black uppercase text-xs tracking-wider">RUT</span>
+                <span className="w-28 font-bold text-black uppercase tracking-wider">RUT</span>
                 <span className="mr-2 font-bold">:</span>
                 {isEditing ? (
                   <input
@@ -211,12 +236,12 @@ const InformeHonorariosPrint = ({
                     className="border border-amber-400 bg-amber-50 px-2 py-0.5 rounded text-xs font-bold w-48"
                   />
                 ) : (
-                  <span className="font-semibold text-black">{formData.funcionarioRut}</span>
+                  <span className="font-normal text-black">{formData.funcionarioRut}</span>
                 )}
               </div>
 
               <div className="flex items-center">
-                <span className="w-28 font-bold text-black uppercase text-xs tracking-wider">CARGO</span>
+                <span className="w-28 font-bold text-black uppercase tracking-wider">CARGO</span>
                 <span className="mr-2 font-bold">:</span>
                 {isEditing ? (
                   <input
@@ -226,12 +251,12 @@ const InformeHonorariosPrint = ({
                     className="border border-amber-400 bg-amber-50 px-2 py-0.5 rounded text-xs font-bold w-72"
                   />
                 ) : (
-                  <span className="font-semibold text-black">{formData.funcionarioCargo}</span>
+                  <span className="font-normal text-black">{formData.funcionarioCargo}</span>
                 )}
               </div>
 
               <div className="flex items-center">
-                <span className="w-28 font-bold text-black uppercase text-xs tracking-wider">LUGAR</span>
+                <span className="w-28 font-bold text-black uppercase tracking-wider">LUGAR</span>
                 <span className="mr-2 font-bold">:</span>
                 {isEditing ? (
                   <input
@@ -241,12 +266,12 @@ const InformeHonorariosPrint = ({
                     className="border border-amber-400 bg-amber-50 px-2 py-0.5 rounded text-xs font-bold w-48"
                   />
                 ) : (
-                  <span className="font-semibold text-black">{formData.funcionarioLugar}</span>
+                  <span className="font-normal text-black">{formData.funcionarioLugar}</span>
                 )}
               </div>
 
               <div className="flex items-center">
-                <span className="w-28 font-bold text-black uppercase text-xs tracking-wider">MES Y AÑO</span>
+                <span className="w-28 font-bold text-black uppercase tracking-wider">MES Y AÑO</span>
                 <span className="mr-2 font-bold">:</span>
                 {isEditing ? (
                   <input
@@ -256,20 +281,28 @@ const InformeHonorariosPrint = ({
                     className="border border-amber-400 bg-amber-50 px-2 py-0.5 rounded text-xs font-bold w-48"
                   />
                 ) : (
-                  <span className="font-semibold text-black uppercase">{formData.periodo}</span>
+                  <span className="font-normal text-black uppercase">{formData.periodo}</span>
                 )}
               </div>
             </div>
 
             {/* Section: Valores del Servicio */}
             <div className="mt-6 mb-4">
-              <h3 className="font-bold text-sm text-black underline mb-3">Valores del Servicio:</h3>
+              <h3 
+                style={{ fontFamily: FONT_SEGOE, fontSize: '11pt' }} 
+                className="font-bold text-black underline mb-3"
+              >
+                Valores del Servicio:
+              </h3>
 
               {/* Side-by-side Tables Grid */}
-              <div className="flex flex-col sm:flex-row gap-6 items-start">
+              <div 
+                style={{ fontFamily: FONT_SEGOE }} 
+                className="flex flex-col sm:flex-row gap-6 items-start text-xs"
+              >
                 
                 {/* Table 1: Horas (Lu-Vi, Sa-Do-Fest) */}
-                <div className="w-full sm:w-[58%] border-2 border-black text-xs font-sans">
+                <div className="w-full sm:w-[58%] border-2 border-black">
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b-2 border-black">
@@ -350,7 +383,7 @@ const InformeHonorariosPrint = ({
                 </div>
 
                 {/* Table 2: Valor Mensual / Días Trabajados */}
-                <div className="w-full sm:w-[40%] border-2 border-black text-xs font-sans">
+                <div className="w-full sm:w-[40%] border-2 border-black">
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b-2 border-black">
@@ -395,41 +428,49 @@ const InformeHonorariosPrint = ({
               </div>
             </div>
 
-            {/* Firmas Block Page 1: 3 horizontal signature lines */}
-            <div className="mt-16 mb-6 pt-10 flex justify-between items-end text-center text-[10px] font-bold tracking-tight">
-              
+            {/* Firmas Block Page 1: Segoe UI 8pt */}
+            <div 
+              style={{ fontFamily: FONT_SEGOE, fontSize: '8pt' }} 
+              className="mt-16 mb-6 pt-10 flex justify-between items-end text-center font-bold tracking-tight"
+            >
               {/* Signature 1 */}
               <div className="w-[30%] space-y-1">
                 <div className="border-t-2 border-gray-400 pt-2">
-                  <p className="font-extrabold uppercase text-xs">PRESTADOR DE SERVICIO</p>
-                  <p className="text-[9px] font-semibold text-gray-500 mt-0.5 uppercase">FIRMA</p>
+                  <p className="font-bold uppercase text-[9pt]">PRESTADOR DE SERVICIO</p>
+                  <p style={{ fontSize: '8pt' }} className="font-normal text-gray-600 mt-0.5 uppercase">FIRMA</p>
                 </div>
               </div>
 
               {/* Signature 2 */}
               <div className="w-[36%] space-y-1">
                 <div className="border-t-2 border-gray-400 pt-2">
-                  <p className="font-extrabold uppercase text-xs">ENCARGADO DE CENTRO O REFERENTE DE PROGRAMA</p>
-                  <p className="text-[9px] font-semibold text-gray-500 mt-0.5 uppercase">NOMBRE Y FIRMA</p>
+                  <p className="font-bold uppercase text-[9pt]">ENCARGADO DE CENTRO O REFERENTE DE PROGRAMA</p>
+                  <p style={{ fontSize: '8pt' }} className="font-normal text-gray-600 mt-0.5 uppercase">NOMBRE Y FIRMA</p>
                 </div>
               </div>
 
               {/* Signature 3 */}
               <div className="w-[30%] space-y-1">
                 <div className="border-t-2 border-gray-400 pt-2">
-                  <p className="font-extrabold uppercase text-xs">DIRECCION DE SALUD</p>
-                  <p className="text-[9px] font-semibold text-gray-500 mt-0.5 uppercase">NOMBRE Y FIRMA</p>
+                  <p className="font-bold uppercase text-[9pt]">DIRECCION DE SALUD</p>
+                  <p style={{ fontSize: '8pt' }} className="font-normal text-gray-600 mt-0.5 uppercase">NOMBRE Y FIRMA</p>
                 </div>
               </div>
             </div>
 
-            {/* Datos Personales Para Pago Con Transferencia Bancaria */}
-            <div className="my-4 pt-3 border-t border-gray-300 space-y-1 text-xs">
-              <h4 className="font-extrabold uppercase text-black underline mb-2">
+            {/* Datos Personales Para Pago Con Transferencia Bancaria: Segoe UI 8pt */}
+            <div 
+              style={{ fontFamily: FONT_SEGOE, fontSize: '8pt' }} 
+              className="my-4 pt-3 border-t border-gray-300 space-y-1"
+            >
+              <h4 
+                style={{ fontFamily: FONT_SEGOE, fontSize: '9pt' }} 
+                className="font-bold uppercase text-black underline mb-2"
+              >
                 DATOS PERSONALES PARA PAGO CON TRANSFERENCIA BANCARIA
               </h4>
 
-              <div className="flex flex-wrap items-center gap-x-8 gap-y-1 font-medium">
+              <div className="flex flex-wrap items-center gap-x-8 gap-y-1">
                 <div>
                   <span className="font-bold">TIPO DE CUENTA: </span>
                   {isEditing ? (
@@ -440,7 +481,7 @@ const InformeHonorariosPrint = ({
                       className="border border-amber-400 bg-amber-50 px-1 text-xs"
                     />
                   ) : (
-                    formData.tipoCuenta
+                    <span className="font-normal">{formData.tipoCuenta}</span>
                   )}
                 </div>
 
@@ -454,12 +495,12 @@ const InformeHonorariosPrint = ({
                       className="border border-amber-400 bg-amber-50 px-1 text-xs"
                     />
                   ) : (
-                    formData.banco
+                    <span className="font-normal">{formData.banco}</span>
                   )}
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-8 gap-y-1 font-medium">
+              <div className="flex flex-wrap items-center gap-x-8 gap-y-1">
                 <div>
                   <span className="font-bold">Nº CUENTA: </span>
                   {isEditing ? (
@@ -470,7 +511,7 @@ const InformeHonorariosPrint = ({
                       className="border border-amber-400 bg-amber-50 px-1 text-xs"
                     />
                   ) : (
-                    formData.numeroCuenta
+                    <span className="font-normal">{formData.numeroCuenta}</span>
                   )}
                 </div>
 
@@ -484,12 +525,12 @@ const InformeHonorariosPrint = ({
                       className="border border-amber-400 bg-amber-50 px-1 text-xs"
                     />
                   ) : (
-                    formData.telefono
+                    <span className="font-normal">{formData.telefono}</span>
                   )}
                 </div>
               </div>
 
-              <div className="font-medium">
+              <div>
                 <span className="font-bold">E-MAIL DE CONTACTO PARA NOTIFICACION: </span>
                 {isEditing ? (
                   <input
@@ -499,14 +540,17 @@ const InformeHonorariosPrint = ({
                     className="border border-amber-400 bg-amber-50 px-1 text-xs w-64"
                   />
                 ) : (
-                  formData.email
+                  <span className="font-normal">{formData.email}</span>
                 )}
               </div>
             </div>
 
             {/* Fecha and Disclaimer note */}
-            <div className="mt-4 text-[10px] space-y-1.5 font-sans">
-              <p className="font-semibold text-black">
+            <div 
+              style={{ fontFamily: FONT_SEGOE, fontSize: '8pt' }} 
+              className="mt-4 space-y-1.5"
+            >
+              <p className="font-normal text-black">
                 FECHA: Día: <span className="font-bold">{formData.fechaDia}</span> Mes: <span className="font-bold">{formData.fechaMes}</span> Año: <span className="font-bold">{formData.fechaAño}</span>
               </p>
               <p className="font-bold text-black leading-tight">
@@ -516,7 +560,10 @@ const InformeHonorariosPrint = ({
           </div>
 
           {/* Footer Page Number */}
-          <div className="text-right pt-2 text-xs font-bold text-black">
+          <div 
+            style={{ fontFamily: FONT_SEGOE, fontSize: '9pt' }} 
+            className="text-right pt-2 font-bold text-black"
+          >
             Página 1
           </div>
         </div>
@@ -525,10 +572,10 @@ const InformeHonorariosPrint = ({
         {/* ════════════════════════════════════════════════════════════════════════════
             PÁGINA 2: DETALLE DE LAS PRESTACIÓNES REALIZADAS
            ════════════════════════════════════════════════════════════════════════════ */}
-        <div className="w-[210mm] min-h-[297mm] bg-white p-8 md:p-12 mx-auto shadow-2xl print:shadow-none print:m-0 print:p-8 print:w-full font-sans text-black relative flex flex-col justify-between">
+        <div className="w-[210mm] min-h-[297mm] bg-white p-8 md:p-12 mx-auto shadow-2xl print:shadow-none print:m-0 print:p-8 print:w-full text-black relative flex flex-col justify-between">
           <div>
             
-            {/* Corporación Logo Image & Letterhead Header */}
+            {/* Header: Logo & Subtitle */}
             <div className="border-b-2 border-black pb-1 mb-1">
               <div className="flex items-start justify-between">
                 <div>
@@ -543,64 +590,82 @@ const InformeHonorariosPrint = ({
                   />
                 </div>
               </div>
-              <p className="text-xs italic text-gray-500 mt-1 font-serif">
+              <p 
+                style={{ fontFamily: FONT_MYRIAD, fontSize: '14pt' }} 
+                className="italic text-gray-700 mt-1"
+              >
                 Corporación Municipal de Melipilla
               </p>
             </div>
             
-            <p className="text-[9px] italic text-gray-400 mb-6 font-serif leading-tight">
+            <p 
+              style={{ fontFamily: FONT_BOOKMAN, fontSize: '8pt' }} 
+              className="italic text-gray-500 mb-6 leading-tight"
+            >
               Eleuterio Ramírez N°0387<br />
               Población. Manuel Rodríguez<br />
               Melipilla / Fono: 224897900
             </p>
 
-            {/* Page 2 Title */}
+            {/* Page 2 Title: Segoe UI 20pt */}
             <div className="text-center my-6">
-              <h1 className="text-xl font-extrabold uppercase tracking-wide text-black underline underline-offset-4 decoration-1">
+              <h1 
+                style={{ fontFamily: FONT_SEGOE, fontSize: '20pt' }} 
+                className="font-bold uppercase tracking-tight text-black underline underline-offset-4 decoration-1"
+              >
                 DETALLE DE LAS PRESTACIÓNES REALIZADAS
               </h1>
             </div>
 
-            {/* General Info Fields (Same vertical alignment) */}
-            <div className="my-6 space-y-1.5 text-sm font-medium">
+            {/* General Info Fields: Calibri 11pt */}
+            <div 
+              style={{ fontFamily: FONT_CALIBRI, fontSize: '11pt' }} 
+              className="my-6 space-y-1.5 font-normal"
+            >
               <div className="flex items-center">
-                <span className="w-28 font-bold text-black uppercase text-xs tracking-wider">NOMBRE</span>
+                <span className="w-28 font-bold text-black uppercase tracking-wider">NOMBRE</span>
                 <span className="mr-2 font-bold">:</span>
-                <span className="font-semibold text-black">{formData.funcionarioNombre}</span>
+                <span className="font-normal text-black">{formData.funcionarioNombre}</span>
               </div>
 
               <div className="flex items-center">
-                <span className="w-28 font-bold text-black uppercase text-xs tracking-wider">RUT</span>
+                <span className="w-28 font-bold text-black uppercase tracking-wider">RUT</span>
                 <span className="mr-2 font-bold">:</span>
-                <span className="font-semibold text-black">{formData.funcionarioRut}</span>
+                <span className="font-normal text-black">{formData.funcionarioRut}</span>
               </div>
 
               <div className="flex items-center">
-                <span className="w-28 font-bold text-black uppercase text-xs tracking-wider">CARGO</span>
+                <span className="w-28 font-bold text-black uppercase tracking-wider">CARGO</span>
                 <span className="mr-2 font-bold">:</span>
-                <span className="font-semibold text-black">{formData.funcionarioCargo}</span>
+                <span className="font-normal text-black">{formData.funcionarioCargo}</span>
               </div>
 
               <div className="flex items-center">
-                <span className="w-28 font-bold text-black uppercase text-xs tracking-wider">LUGAR</span>
+                <span className="w-28 font-bold text-black uppercase tracking-wider">LUGAR</span>
                 <span className="mr-2 font-bold">:</span>
-                <span className="font-semibold text-black">{formData.funcionarioLugar}</span>
+                <span className="font-normal text-black">{formData.funcionarioLugar}</span>
               </div>
 
               <div className="flex items-center">
-                <span className="w-28 font-bold text-black uppercase text-xs tracking-wider">MES Y AÑO</span>
+                <span className="w-28 font-bold text-black uppercase tracking-wider">MES Y AÑO</span>
                 <span className="mr-2 font-bold">:</span>
-                <span className="font-semibold text-black uppercase">{formData.periodo}</span>
+                <span className="font-normal text-black uppercase">{formData.periodo}</span>
               </div>
             </div>
 
             {/* Activities List Section */}
             <div className="my-8 space-y-4">
-              <h3 className="font-bold text-xs uppercase text-black">
-                DETALLE PRINCIPALES ACTIVIDADES REALIZADAS (Mencionar 4 o 5 más importantes):
+              <h3 
+                style={{ fontFamily: FONT_SEGOE, fontSize: '10pt' }} 
+                className="font-bold uppercase text-black"
+              >
+                DETALLE PRINCIPALES ACTIVIDADES REALIZADAS (MENCIONAR 4 O 5 MÁS IMPORTANTES):
               </h3>
 
-              <div className="pl-6 space-y-3 font-medium text-xs leading-relaxed">
+              <div 
+                style={{ fontFamily: FONT_CALIBRI, fontSize: '11pt' }} 
+                className="pl-6 space-y-3 font-normal leading-relaxed"
+              >
                 {[1, 2, 3, 4, 5].map((idx) => {
                   const key = `actividad${idx}`;
                   return (
@@ -622,30 +687,34 @@ const InformeHonorariosPrint = ({
               </div>
             </div>
 
-            {/* Firmas Block Page 2: 2 horizontal signature lines */}
-            <div className="mt-28 mb-6 pt-10 flex justify-around items-end text-center text-[10px] font-bold tracking-tight">
-              
+            {/* Firmas Block Page 2: Segoe UI 8pt */}
+            <div 
+              style={{ fontFamily: FONT_SEGOE, fontSize: '8pt' }} 
+              className="mt-28 mb-6 pt-10 flex justify-around items-end text-center font-bold tracking-tight"
+            >
               {/* Signature 1 */}
               <div className="w-[38%] space-y-1">
                 <div className="border-t-2 border-gray-400 pt-2">
-                  <p className="font-extrabold uppercase text-xs">PRESTADOR DE SERVICIO</p>
-                  <p className="text-[9px] font-semibold text-gray-500 mt-0.5 uppercase">FIRMA</p>
+                  <p className="font-bold uppercase text-[9pt]">PRESTADOR DE SERVICIO</p>
+                  <p style={{ fontSize: '8pt' }} className="font-normal text-gray-600 mt-0.5 uppercase">FIRMA</p>
                 </div>
               </div>
 
               {/* Signature 2 */}
               <div className="w-[44%] space-y-1">
                 <div className="border-t-2 border-gray-400 pt-2">
-                  <p className="font-extrabold uppercase text-xs">ENCARGADO DE CENTRO O REFERENTE DE PROGRAMA</p>
-                  <p className="text-[9px] font-semibold text-gray-500 mt-0.5 uppercase">NOMBRE Y FIRMA</p>
+                  <p className="font-bold uppercase text-[9pt]">ENCARGADO DE CENTRO O REFERENTE DE PROGRAMA</p>
+                  <p style={{ fontSize: '8pt' }} className="font-normal text-gray-600 mt-0.5 uppercase">NOMBRE Y FIRMA</p>
                 </div>
               </div>
-
             </div>
           </div>
 
           {/* Footer Page Number */}
-          <div className="text-right pt-2 text-xs font-bold text-black">
+          <div 
+            style={{ fontFamily: FONT_SEGOE, fontSize: '9pt' }} 
+            className="text-right pt-2 font-bold text-black"
+          >
             Página 2
           </div>
         </div>
