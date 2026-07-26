@@ -72,8 +72,29 @@ const MisHonorariosView = ({ userData }) => {
           };
         });
 
-        // Filtrar por mes seleccionado en el frontend para mayor flexibilidad
-        const filtered = docs.filter(d => d.fecha && d.fecha.getMonth() === Number(mesSeleccionado));
+        // Filtrar estrictamente por la fecha de corte del contrato (Honorarios: 01 a 28/30/31 vs Plazo Fijo: 21 ant. a 20)
+        const esPlazoFijo = (userData?.tipoContrato || '').toLowerCase().includes('plazo') || (userData?.tipoContrato || '').toLowerCase().includes('planta');
+        const monthIdx = Number(mesSeleccionado);
+        const yearNum = 2026;
+
+        let startDate, endDate;
+        if (esPlazoFijo) {
+          const prevMonthIdx = monthIdx === 0 ? 11 : monthIdx - 1;
+          const prevYearNum = monthIdx === 0 ? yearNum - 1 : yearNum;
+          startDate = new Date(prevYearNum, prevMonthIdx, 21, 0, 0, 0, 0);
+          endDate = new Date(yearNum, monthIdx, 20, 23, 59, 59, 999);
+        } else {
+          startDate = new Date(yearNum, monthIdx, 1, 0, 0, 0, 0);
+          const lastDay = new Date(yearNum, monthIdx + 1, 0).getDate();
+          endDate = new Date(yearNum, monthIdx, lastDay, 23, 59, 59, 999);
+        }
+
+        const filtered = docs.filter(d => {
+          if (!d.fecha) return false;
+          const t = d.fecha.getTime();
+          return t >= startDate.getTime() && t <= endDate.getTime();
+        });
+
         setAsistencias(filtered);
       } catch (err) {
         console.error("Error fetching honorarios:", err);
@@ -118,10 +139,15 @@ const MisHonorariosView = ({ userData }) => {
     </div>
   );
 
-  const proyeccionBase = calcularProyeccionTurno(userData?.categoriaLey || 'E', 'Turno 1', userData?.tipoPrestador || 'Administrativo');
-  const tarifaNormal = proyeccionBase.tarifaHoraHabil || 21000;
-  const tarifaFestivo = proyeccionBase.tarifaHoraInhabil || 21000;
-  const periodoNombreStr = new Date(2026, Number(mesSeleccionado), 1).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' }).toUpperCase();
+  const esPlazoFijo = (userData?.tipoContrato || '').toLowerCase().includes('plazo') || (userData?.tipoContrato || '').toLowerCase().includes('planta');
+  const monthIdx = Number(mesSeleccionado);
+  const lastDayOfMonth = new Date(2026, monthIdx + 1, 0).getDate();
+  const prevMonthName = new Date(2026, monthIdx - 1 < 0 ? 11 : monthIdx - 1, 1).toLocaleDateString('es-CL', { month: 'long' });
+  const currentMonthName = new Date(2026, monthIdx, 1).toLocaleDateString('es-CL', { month: 'long' });
+
+  const corteTextoInfo = esPlazoFijo
+    ? `Corte Plazo Fijo: 21 de ${prevMonthName} al 20 de ${currentMonthName}`
+    : `Corte Honorarios: 01 al ${lastDayOfMonth} de ${currentMonthName}`;
 
   if (showPrintView) {
     return (
@@ -177,7 +203,12 @@ const MisHonorariosView = ({ userData }) => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-secondary tracking-tight">Mis Honorarios y Liquidación</h1>
-          <p className="text-gray-500 mt-1">Transparencia financiera y firma de informes mensuales.</p>
+          <p className="text-gray-500 mt-1 flex items-center gap-2">
+            Transparencia financiera y firma de informes mensuales.
+            <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-xl text-xs font-black uppercase tracking-wider inline-flex items-center gap-1.5 ml-2">
+              <Clock size={13} /> {corteTextoInfo}
+            </span>
+          </p>
         </div>
         
         <div className="flex items-center gap-4 bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
