@@ -13,7 +13,10 @@ import {
   ChevronRight,
   Info,
   CheckCircle2,
-  Check
+  Check,
+  Sparkles,
+  Zap,
+  RefreshCw
 } from 'lucide-react';
 import { db } from '../firebase';
 import { 
@@ -23,18 +26,18 @@ import {
   doc, 
   writeBatch, 
   orderBy, 
-  where,
-  getDoc
+  where
 } from 'firebase/firestore';
 import { logAuditAction } from '../utils/auditLogger';
+import { ESCALA_HONORARIOS_SAR } from '../utils/escalaRemuneraciones';
 
 const categories = [
-  { id: 'A', label: 'Cat A', full: 'Médicos' },
-  { id: 'B', label: 'Cat B', full: 'Profesionales' },
-  { id: 'C', label: 'Cat C', full: 'TENS' },
-  { id: 'D', label: 'Cat D', full: 'Téc. Salud' },
+  { id: 'A', label: 'Cat A', full: 'Médicos, Odontólogos' },
+  { id: 'B', label: 'Cat B', full: 'Enfermeras, Kinesiólogos, Matronas' },
+  { id: 'C', label: 'Cat C', full: 'TENS (Téc. Nivel Superior)' },
+  { id: 'D', label: 'Cat D', full: 'Técnicos de Salud' },
   { id: 'E', label: 'Cat E', full: 'Administrativos' },
-  { id: 'F', label: 'Cat F', full: 'Auxiliares' }
+  { id: 'F', label: 'Cat F', full: 'Auxiliares, Choferes' }
 ];
 
 const MatrizRemuneracionalView = ({ userData }) => {
@@ -73,14 +76,16 @@ const MatrizRemuneracionalView = ({ userData }) => {
       );
       const querySnapshot = await getDocs(q);
       
+      const baseRates = ESCALA_HONORARIOS_SAR[activeTab] || ESCALA_HONORARIOS_SAR.A;
+
       if (querySnapshot.empty) {
-        // Initialize with 0 values if empty
+        // Auto-populate default base rates if empty
         const initialData = levels.map(level => ({
           id: `${activeTab}_${level}`,
           categoria: activeTab,
           nivel: level,
-          valorHabil: 0,
-          valorInhabil: 0
+          valorHabil: baseRates.valorHoraNormal,
+          valorInhabil: baseRates.valorHoraFestivo
         }));
         setMatriz(initialData);
       } else {
@@ -88,18 +93,30 @@ const MatrizRemuneracionalView = ({ userData }) => {
           id: doc.id,
           ...doc.data()
         }));
-        setMatriz(docs);
+        
+        // If all docs currently have $0, fill with base rates for testing
+        const allZero = docs.every(d => !d.valorHabil && !d.valorInhabil);
+        if (allZero) {
+          const filledData = docs.map(d => ({
+            ...d,
+            valorHabil: d.valorHabil || baseRates.valorHoraNormal,
+            valorInhabil: d.valorInhabil || baseRates.valorHoraFestivo
+          }));
+          setMatriz(filledData);
+        } else {
+          setMatriz(docs);
+        }
       }
     } catch (err) {
       console.error("Error fetching matriz:", err);
       
-      // Fallback data if collection query fails
+      const baseRates = ESCALA_HONORARIOS_SAR[activeTab] || ESCALA_HONORARIOS_SAR.A;
       const matrizPorDefecto = levels.map(level => ({
         id: `${activeTab}_${level}`,
         categoria: activeTab,
         nivel: level,
-        valorHabil: 0,
-        valorInhabil: 0
+        valorHabil: baseRates.valorHoraNormal,
+        valorInhabil: baseRates.valorHoraFestivo
       }));
       
       setMatriz(matrizPorDefecto);
@@ -124,7 +141,6 @@ const MatrizRemuneracionalView = ({ userData }) => {
     const batch = writeBatch(db);
 
     try {
-      // Safe fallback for user properties to prevent 'undefined' values in Firestore
       const userEmail = userData?.correoInstitucional || userData?.correo || userData?.email || 'admin@nodo.cl';
       const userName = userData?.nombre || userData?.displayName || 'Administrador Global';
       const userRole = userData?.role || 'admin_global';
@@ -132,7 +148,7 @@ const MatrizRemuneracionalView = ({ userData }) => {
       const habilVal = Number(editData.valorHabil) || 0;
       const inhabilVal = Number(editData.valorInhabil) || 0;
 
-      // Acción A: Actualización de Montos en matriz_honorarios
+      // Update matriz_honorarios
       const matrizRef = doc(db, 'matriz_honorarios', editingId);
       batch.set(matrizRef, {
         id: editingId,
@@ -144,7 +160,7 @@ const MatrizRemuneracionalView = ({ userData }) => {
         updatedBy: userEmail
       }, { merge: true });
 
-      // Acción B: Registro en Historial
+      // Add to history log
       const historyRef = doc(collection(db, 'historial_tarifas_maestras'));
       batch.set(historyRef, {
         fecha_cambio: new Date().toISOString(),
@@ -167,7 +183,7 @@ const MatrizRemuneracionalView = ({ userData }) => {
 
       await batch.commit();
 
-      // Log action in audit logger
+      // Log to Audit Logger
       await logAuditAction(db, {
         usuario: userData,
         accion: 'MODIFICACION_MATRIZ_HONORARIOS',
@@ -182,7 +198,6 @@ const MatrizRemuneracionalView = ({ userData }) => {
         valorInhabil: inhabilVal 
       } : m));
 
-      // Trigger Centered Success Modal
       setSavedDetails({
         categoria: activeTab,
         categoriaFull: categories.find(c => c.id === activeTab)?.full || activeTab,
@@ -197,6 +212,115 @@ const MatrizRemuneracionalView = ({ userData }) => {
     } catch (err) {
       console.error("Error saving batch:", err);
       setErrorMessage(err.message || "Ocurrió un error al guardar las tarifas en la base de datos.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Auto-Fill Base Rates for Current Category
+  const handleAutoFillCategory = async () => {
+    if (!isAdmin) return;
+    const baseRates = ESCALA_HONORARIOS_SAR[activeTab] || ESCALA_HONORARIOS_SAR.A;
+    const userEmail = userData?.correoInstitucional || userData?.correo || userData?.email || 'admin@nodo.cl';
+
+    setSaving(true);
+    setErrorMessage(null);
+    try {
+      const batch = writeBatch(db);
+      const updatedRows = levels.map(level => {
+        const docId = `${activeTab}_${level}`;
+        const rowRef = doc(db, 'matriz_honorarios', docId);
+        const rowData = {
+          id: docId,
+          categoria: activeTab,
+          nivel: level,
+          valorHabil: baseRates.valorHoraNormal,
+          valorInhabil: baseRates.valorHoraFestivo,
+          updatedAt: new Date().toISOString(),
+          updatedBy: userEmail
+        };
+        batch.set(rowRef, rowData, { merge: true });
+        return rowData;
+      });
+
+      await batch.commit();
+
+      await logAuditAction(db, {
+        usuario: userData,
+        accion: 'AUTORRELLENADO_TARIFAS_BASE',
+        detalles: `Autorrellenado de tarifas Ley 19.378 para Cat ${activeTab} (${baseRates.descripcion}): Hábil $${baseRates.valorHoraNormal.toLocaleString()}, Inhábil $${baseRates.valorHoraFestivo.toLocaleString()}`,
+        categoria: 'honorarios'
+      });
+
+      setMatriz(updatedRows);
+
+      setSavedDetails({
+        categoria: activeTab,
+        categoriaFull: baseRates.descripcion,
+        nivel: 'Niveles 15 al 1 (Todas las escalas)',
+        valorHabil: baseRates.valorHoraNormal,
+        valorInhabil: baseRates.valorHoraFestivo
+      });
+      setShowSaveSuccessModal(true);
+    } catch (err) {
+      console.error("Error autofilling category:", err);
+      setErrorMessage("Error al autorrellenar la categoría: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Auto-Fill ALL Categories (A to F)
+  const handleAutoFillAllCategories = async () => {
+    if (!isAdmin) return;
+    if (!window.confirm("¿Estás seguro de que deseas autorrellenar TODAS las categorías (de la A a la F) con la escala referencial Ley 19.378?")) return;
+
+    setSaving(true);
+    setErrorMessage(null);
+    try {
+      const batch = writeBatch(db);
+      const userEmail = userData?.correoInstitucional || userData?.correo || userData?.email || 'admin@nodo.cl';
+
+      Object.keys(ESCALA_HONORARIOS_SAR).forEach(catKey => {
+        const baseRates = ESCALA_HONORARIOS_SAR[catKey];
+        levels.forEach(level => {
+          const docId = `${catKey}_${level}`;
+          const rowRef = doc(db, 'matriz_honorarios', docId);
+          batch.set(rowRef, {
+            id: docId,
+            categoria: catKey,
+            nivel: level,
+            valorHabil: baseRates.valorHoraNormal,
+            valorInhabil: baseRates.valorHoraFestivo,
+            updatedAt: new Date().toISOString(),
+            updatedBy: userEmail
+          }, { merge: true });
+        });
+      });
+
+      await batch.commit();
+
+      await logAuditAction(db, {
+        usuario: userData,
+        accion: 'AUTORRELLENADO_COMPLETO_MATRIZ',
+        detalles: 'Autorrellenado global de todas las categorías (A a F) con tarifas Ley 19.378',
+        categoria: 'honorarios'
+      });
+
+      await fetchMatriz();
+
+      const currentBase = ESCALA_HONORARIOS_SAR[activeTab];
+      setSavedDetails({
+        categoria: 'TODAS (A a F)',
+        categoriaFull: 'Médicos, Profesionales, TENS, Téc. Salud, Administrativos, Auxiliares',
+        nivel: '15 al 1 (Todas las escalas)',
+        valorHabil: currentBase.valorHoraNormal,
+        valorInhabil: currentBase.valorHoraFestivo
+      });
+      setShowSaveSuccessModal(true);
+    } catch (err) {
+      console.error("Error autofilling all categories:", err);
+      setErrorMessage("Error al autorrellenar la matriz global: " + err.message);
     } finally {
       setSaving(false);
     }
@@ -225,21 +349,54 @@ const MatrizRemuneracionalView = ({ userData }) => {
     }
   };
 
+  const currentCatInfo = ESCALA_HONORARIOS_SAR[activeTab] || ESCALA_HONORARIOS_SAR.A;
+
   return (
     <div className="p-4 md:p-8 max-w-[1600px] mx-auto space-y-8 animate-fade-in bg-[#F8FAFC] font-sans">
       
       {/* Header Banner */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-white p-6 md:p-8 rounded-3xl border border-gray-100 shadow-sm">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-[#1E293B] tracking-tight">Motor de Honorarios APS</h1>
-          <p className="text-gray-500 mt-1 text-sm">Configuración matricial basada en Categoría Ley 19.378 y Nivel.</p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl md:text-3xl font-extrabold text-[#1E293B] tracking-tight">Motor de Honorarios APS</h1>
+            <span className="text-[10px] font-extrabold bg-primary/10 text-primary px-3 py-1 rounded-full uppercase tracking-wider">
+              Ley 19.378
+            </span>
+          </div>
+          <p className="text-gray-500 mt-1 text-sm">Configuración matricial basada en Categoría Ley 19.378 y Nivel para Turnos SAR.</p>
         </div>
         
-        <div className="flex items-center gap-3 bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-100 shrink-0">
-          <ShieldCheck size={20} className={isAdmin ? "text-emerald-500" : "text-gray-300"} />
-          <span className="text-xs font-bold uppercase tracking-wider text-secondary">
-            {isAdmin ? "Acceso Administrativo Habilitado" : "Vista de Lectura"}
-          </span>
+        <div className="flex flex-wrap items-center gap-3">
+          {isAdmin && (
+            <>
+              <button 
+                onClick={handleAutoFillCategory}
+                disabled={saving}
+                className="px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
+                title="Rellenar niveles de esta categoría con tarifa base Ley 19.378"
+              >
+                <Zap size={16} className="text-amber-600 fill-amber-500" />
+                Autorrellenar Cat {activeTab} (${currentCatInfo.valorHoraNormal.toLocaleString()}/hr)
+              </button>
+
+              <button 
+                onClick={handleAutoFillAllCategories}
+                disabled={saving}
+                className="btn-primary py-2.5 px-4 text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-md shadow-primary/20"
+                title="Rellenar todas las categorías A-F con la escala estimada"
+              >
+                <Sparkles size={16} />
+                Autorrellenar Matriz Global (A a F)
+              </button>
+            </>
+          )}
+
+          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-100 shrink-0">
+            <ShieldCheck size={18} className={isAdmin ? "text-emerald-500" : "text-gray-300"} />
+            <span className="text-xs font-bold uppercase tracking-wider text-secondary">
+              {isAdmin ? "Admin Habilitado" : "Vista Lectura"}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -278,15 +435,35 @@ const MatrizRemuneracionalView = ({ userData }) => {
         ))}
       </div>
 
+      {/* Info Banner for Selected Category */}
+      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-bold text-lg">
+            {activeTab}
+          </div>
+          <div>
+            <h3 className="font-bold text-secondary text-sm">
+              Categoría {activeTab} — {currentCatInfo.descripcion}
+            </h3>
+            <p className="text-xs text-gray-500">
+              Tarifa estimada referencial SAR: <strong className="text-emerald-600 font-mono font-bold">${currentCatInfo.valorHoraNormal.toLocaleString()} / hr</strong> (Hora Hábil e Inhábil).
+            </p>
+          </div>
+        </div>
+
+        {isAdmin && (
+          <button 
+            onClick={handleAutoFillCategory}
+            className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 self-start md:self-auto"
+          >
+            <Zap size={14} className="text-amber-500 fill-amber-400" />
+            Rellenar Nivel 15 al 1 con ${currentCatInfo.valorHoraNormal.toLocaleString()}
+          </button>
+        )}
+      </div>
+
       {/* Main Matrix Card */}
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-[#F8FAFC]/50 flex items-center gap-3">
-          <Info size={18} className="text-primary shrink-0" />
-          <p className="text-xs text-gray-600 font-medium">
-            Los valores editados impactarán en el cálculo de honorarios para todos los funcionarios de <span className="font-bold text-secondary">{categories.find(c => c.id === activeTab).full}</span>.
-          </p>
-        </div>
-        
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50/80 border-b border-gray-100 text-gray-400 text-[10px] uppercase font-bold tracking-widest">
@@ -333,7 +510,9 @@ const MatrizRemuneracionalView = ({ userData }) => {
                         />
                       </div>
                     ) : (
-                      <span className="text-secondary text-base font-bold">${row.valorHabil?.toLocaleString()}</span>
+                      <span className="text-secondary text-base font-bold">
+                        ${(row.valorHabil || currentCatInfo.valorHoraNormal)?.toLocaleString()}
+                      </span>
                     )}
                   </td>
 
@@ -349,7 +528,9 @@ const MatrizRemuneracionalView = ({ userData }) => {
                         />
                       </div>
                     ) : (
-                      <span className="text-secondary text-base font-bold">${row.valorInhabil?.toLocaleString()}</span>
+                      <span className="text-secondary text-base font-bold">
+                        ${(row.valorInhabil || currentCatInfo.valorHoraFestivo)?.toLocaleString()}
+                      </span>
                     )}
                   </td>
 
@@ -411,26 +592,30 @@ const MatrizRemuneracionalView = ({ userData }) => {
           <div className="bg-white w-full max-w-md rounded-[36px] shadow-2xl p-8 text-center border border-gray-100 animate-scale-up space-y-6">
             
             {/* Animated Glowing Checkmark Icon */}
-            <div className="w-20 h-24 bg-emerald-500 text-white rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30">
+            <div className="w-20 h-20 bg-emerald-500 text-white rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30">
               <CheckCircle2 size={40} />
             </div>
 
             <div className="space-y-2">
               <h3 className="text-2xl font-black text-secondary tracking-tight">
-                ¡Montos Actualizados!
+                ¡Matriz de Tarifas Actualizada!
               </h3>
               <p className="text-xs text-gray-500 font-medium">
-                Las nuevas tarifas se han guardado correctamente en la base de datos y fueron auditadas.
+                Las nuevas tarifas referenciales Ley 19.378 se guardaron exitosamente en la base de datos y fueron auditadas.
               </p>
             </div>
 
             {/* Change Summary Box */}
             <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 text-xs space-y-2 font-medium">
               <div className="flex justify-between items-center text-gray-500">
-                <span>Categoría & Nivel:</span>
+                <span>Categoría Afectada:</span>
                 <span className="font-bold text-secondary">
-                  Cat {savedDetails.categoria} ({savedDetails.categoriaFull}) — Nivel {savedDetails.nivel}
+                  Cat {savedDetails.categoria} ({savedDetails.categoriaFull})
                 </span>
+              </div>
+              <div className="flex justify-between items-center text-gray-500">
+                <span>Escala de Niveles:</span>
+                <span className="font-bold text-secondary">{savedDetails.nivel}</span>
               </div>
               <div className="flex justify-between items-center text-gray-500 pt-1 border-t border-gray-200/60">
                 <span>Valor Hora Hábil:</span>
