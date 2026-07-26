@@ -620,25 +620,38 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
       )}
 
       {/* Header & Tabs */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-secondary">Control de Asistencia</h1>
-          <p className="text-gray-500 mt-1">Registra tu jornada laboral y revisa tus turnos programados.</p>
-        </div>
-        <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="text-right">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Hora Actual</p>
-            <p className="text-xl font-bold text-secondary leading-none">{currentTime}</p>
+      <div className="space-y-4">
+        {userData?.modoPruebaActivo && (
+          <div className="p-4 bg-purple-100/90 border border-purple-300 rounded-3xl text-purple-900 font-extrabold text-xs flex items-center justify-between shadow-xs">
+            <span className="flex items-center gap-2">
+              🧪 MODO PRUEBA ACTIVO — LOS MARCAJES DE ENTRADA Y SALIDA ESTÁN EN SIMULACIÓN DE PRUEBA (GPS OMITIDO)
+            </span>
+            <span className="px-3 py-1 bg-purple-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider animate-pulse">
+              Modo Prueba: ON
+            </span>
           </div>
-          {isAdmin && (
-            <button 
-              onClick={() => setShowConfig(true)}
-              className="w-10 h-10 bg-secondary/10 rounded-full flex items-center justify-center text-secondary hover:bg-secondary/20 transition-colors"
-              title="Configurar Ubicación Central"
-            >
-              <Settings size={20} />
-            </button>
-          )}
+        )}
+
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-secondary">Control de Asistencia</h1>
+            <p className="text-gray-500 mt-1">Registra tu jornada laboral y revisa tus turnos programados.</p>
+          </div>
+          <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Hora Actual</p>
+              <p className="text-xl font-bold text-secondary leading-none">{currentTime}</p>
+            </div>
+            {isAdmin && (
+              <button 
+                onClick={() => setShowConfig(true)}
+                className="w-10 h-10 bg-secondary/10 rounded-full flex items-center justify-center text-secondary hover:bg-secondary/20 transition-colors"
+                title="Configurar Ubicación Central"
+              >
+                <Settings size={20} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

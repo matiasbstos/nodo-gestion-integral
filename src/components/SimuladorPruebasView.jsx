@@ -488,83 +488,44 @@ const SimuladorPruebasView = ({ userData }) => {
           </form>
         </div>
 
-        {/* Card 2: Simular Marcaje (Entrada / Salida) */}
-        <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
-          <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
-            <div className="w-10 h-10 bg-sky-50 text-sky-600 rounded-xl flex items-center justify-center font-bold">
-              <Clock size={20} />
+        {/* Card 2: Probar Flujo Real por Fuera */}
+        <div className="bg-gradient-to-br from-primary/5 via-white to-primary/10 p-6 md:p-8 rounded-3xl border border-primary/20 shadow-sm flex flex-col justify-between space-y-6">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 border-b border-primary/10 pb-4">
+              <div className="w-10 h-10 bg-primary/20 text-primary rounded-xl flex items-center justify-center font-bold">
+                <ArrowRight size={20} />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-secondary text-base">2. Probar Flujo Real por Fuera</h3>
+                <p className="text-xs text-gray-500">Ejecuta las acciones directamente en las vistas reales del sistema.</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-extrabold text-secondary text-base">2. Simular Marcaje de Asistencia</h3>
-              <p className="text-xs text-gray-400">Registra un evento simulado de Entrada o Salida.</p>
-            </div>
+
+            <p className="text-xs text-gray-600 font-medium leading-relaxed">
+              En este laboratorio asignas los turnos de prueba. Para verificar el funcionamiento real de cada categoría y función, realiza las acciones por fuera:
+            </p>
+
+            <ul className="space-y-2 text-xs font-bold text-secondary">
+              <li className="flex items-center gap-2 p-2 bg-white rounded-xl border border-gray-100 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>1. Confirmar turno:</span> <span className="text-gray-500 font-normal">Ve a <strong>"Mis Turnos"</strong> para confirmar y ver la pauta.</span>
+              </li>
+              <li className="flex items-center gap-2 p-2 bg-white rounded-xl border border-gray-100 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-sky-500"></span>
+                <span>2. Marcar asistencia:</span> <span className="text-gray-500 font-normal">Ve a <strong>"Mi Asistencia"</strong> para marcar Entrada o Salida.</span>
+              </li>
+              <li className="flex items-center gap-2 p-2 bg-white rounded-xl border border-gray-100 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                <span>3. Verificar montos y PDF:</span> <span className="text-gray-500 font-normal">Ve a <strong>"Mis Honorarios"</strong> para ver el desglose en vivo.</span>
+              </li>
+            </ul>
           </div>
 
-          <form onSubmit={handleClockSimulated} className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="font-bold text-gray-500 uppercase block mb-1">Fecha de Marcaje *</label>
-                <input 
-                  type="date"
-                  value={clockDate}
-                  onChange={e => setClockDate(e.target.value)}
-                  className="w-full input-field font-bold text-secondary"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-gray-500 uppercase block mb-1">Hora Exacta *</label>
-                <input 
-                  type="time"
-                  value={clockTime}
-                  onChange={e => setClockTime(e.target.value)}
-                  className="w-full input-field font-bold text-secondary"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="font-bold text-gray-500 uppercase block mb-1">Tipo de Evento *</label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setClockType('entrada')}
-                  className={`py-3 rounded-2xl font-bold border transition-all flex items-center justify-center gap-2 ${
-                    clockType === 'entrada'
-                      ? 'bg-emerald-500 text-white border-emerald-600 shadow-md'
-                      : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                  }`}
-                >
-                  <CheckCircle2 size={16} /> Entrada
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setClockType('salida')}
-                  className={`py-3 rounded-2xl font-bold border transition-all flex items-center justify-center gap-2 ${
-                    clockType === 'salida'
-                      ? 'bg-sky-500 text-white border-sky-600 shadow-md'
-                      : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                  }`}
-                >
-                  <Clock size={16} /> Salida
-                </button>
-              </div>
-            </div>
-
-            <button 
-              type="submit" 
-              disabled={isClocking}
-              className="w-full bg-secondary hover:bg-secondary-dark text-white py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md"
-            >
-              {isClocking ? <RefreshCw size={16} className="animate-spin" /> : <Clock size={16} />}
-              ⏱️ Registrar Marcaje Simulado
-            </button>
-          </form>
+          <div className="p-3 bg-purple-100/70 border border-purple-300 rounded-2xl text-[11px] font-bold text-purple-900 flex items-center gap-2">
+            <FlaskConical size={16} className="text-purple-600 shrink-0" />
+            <span>Al estar el Modo Prueba activo (ON), todas las pantallas mostrarán el distintivo de simulación.</span>
+          </div>
         </div>
-
       </div>
 
       {/* Section 3: Live Previsualización e Inclusión del Informe de Prestación */}

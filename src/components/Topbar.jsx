@@ -171,11 +171,23 @@ const Topbar = ({ currentViewTitle, userName, userRole, userData, onOpenMenu }) 
 
         <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-semibold text-secondary leading-tight truncate max-w-[150px]">{userName || 'Cargando...'}</p>
-            <p className="text-[11px] text-gray-400 leading-tight">{userRole || 'Funcionario'}</p>
+            <div className="flex items-center gap-1.5 justify-end">
+              <p className="text-sm font-bold text-secondary leading-tight truncate max-w-[170px]">{userName || 'Cargando...'}</p>
+              {userData?.modoPruebaActivo && (
+                <span className="px-2 py-0.5 bg-purple-100 text-purple-900 border border-purple-300 rounded-md text-[9px] font-black uppercase tracking-wider shadow-2xs animate-pulse">
+                  Modo Prueba: ON
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-gray-400 leading-tight mt-0.5">{userRole || 'Funcionario'}</p>
           </div>
-          <div className="w-10 h-10 rounded-full bg-primary/10 overflow-hidden border-2 border-gray-50 flex items-center justify-center text-primary font-bold">
+          <div className="w-10 h-10 rounded-full bg-primary/10 overflow-hidden border-2 border-purple-200 flex items-center justify-center text-primary font-bold relative shrink-0">
             {userName ? userName.charAt(0).toUpperCase() : '?'}
+            {userData?.modoPruebaActivo && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-purple-600 rounded-full border-2 border-white flex items-center justify-center text-[9px] text-white font-bold" title="Modo Prueba Activado">
+                🧪
+              </span>
+            )}
           </div>
         </div>
       </div>

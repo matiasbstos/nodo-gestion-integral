@@ -264,7 +264,13 @@ const FuncionarioTurnosView = ({ userData }) => {
 
       setTurnos(prev => prev.map(t => t.id === selectedShiftToAccept.id ? { ...t, estado: 'programado', aceptado: true } : t));
       setSelectedShiftToAccept(null);
-      showNotify('¡Turno aceptado con éxito! Se ha habilitado la opción para iniciar la jornada.', 'Turno Confirmado', 'success');
+      
+      const isTestMode = userData?.modoPruebaActivo || selectedShiftToAccept.modoPrueba || selectedShiftToAccept.esPrueba;
+      const msgText = isTestMode 
+        ? '🧪 [MODO PRUEBA ACTIVO] Turno verificado y aceptado en simulación. Cómputo cargado en informe.' 
+        : '¡Turno aceptado con éxito! Se ha habilitado la opción para iniciar la jornada.';
+      
+      showNotify(msgText, isTestMode ? '🧪 Modo Prueba: Turno Aceptado' : 'Turno Confirmado', 'success');
     } catch (err) {
       console.error(err);
       showNotify('Error al aceptar el turno: ' + err.message, 'Error al Aceptar', 'error');

@@ -185,6 +185,15 @@ const InformeHonorariosPrint = ({
            ════════════════════════════════════════════════════════════════════════════ */}
         <div className="w-[210mm] min-h-[297mm] bg-white p-8 md:p-12 mx-auto mb-8 shadow-2xl print:shadow-none print:m-0 print:p-8 print:w-full text-black relative flex flex-col justify-between break-after-page">
           <div>
+            {/* Modo Prueba Banner */}
+            <div className="print:hidden mb-4 p-3 bg-purple-100 border border-purple-300 rounded-2xl text-purple-900 font-extrabold text-xs flex items-center justify-between shadow-2xs">
+              <span className="flex items-center gap-2">
+                🧪 MODO PRUEBA ACTIVO — VALORES Y REPORTES DE INFORMES EN SIMULACIÓN
+              </span>
+              <span className="text-[10px] bg-purple-600 text-white px-2 py-0.5 rounded-md uppercase font-black animate-pulse">
+                Modo Prueba: ON
+              </span>
+            </div>
             
             {/* Header: Logo & Letterhead Subtitle */}
             <div className="border-b-2 border-black pb-1 mb-1">

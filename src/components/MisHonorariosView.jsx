@@ -248,6 +248,18 @@ const MisHonorariosView = ({ userData }) => {
 
   return (
     <div className="p-8 max-w-[1600px] mx-auto space-y-8 animate-fade-in">
+      {/* Modo Prueba Indicador Global */}
+      {userData?.modoPruebaActivo && (
+        <div className="p-4 bg-purple-100/90 border border-purple-300 rounded-3xl text-purple-900 font-extrabold text-xs flex items-center justify-between shadow-xs">
+          <span className="flex items-center gap-2">
+            🧪 MODO PRUEBA ACTIVO — TODOS LOS VALORES Y MONTOS MOSTRADOS CORRESPONDEN A SIMULACIÓN EN VIVO
+          </span>
+          <span className="px-3 py-1 bg-purple-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider animate-pulse">
+            Modo Prueba: ON
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
