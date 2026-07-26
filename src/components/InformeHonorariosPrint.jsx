@@ -4,7 +4,7 @@ import { Printer, Edit3, Save, RotateCcw, Download, Check, HelpCircle } from 'lu
 /**
  * InformeHonorariosPrint Component
  * Exact pixel-perfect replica of "INFORME PRESTACIÓN SERVICIOS" (Page 1 and Page 2).
- * Formatted for A4 page printing with clean page breaks.
+ * Formatted for A4 page printing with clean page breaks and print isolation.
  */
 const InformeHonorariosPrint = ({
   funcionario = {
@@ -84,7 +84,6 @@ const InformeHonorariosPrint = ({
   // Calculate totals
   const totalLuVi = Math.round((formData.valorHoraLuVi || 0) * (formData.horasLuVi || 0));
   const totalSaDoFest = Math.round((formData.valorHoraSaDoFest || 0) * (formData.horasSaDoFest || 0));
-  const totalGeneral = totalLuVi + totalSaDoFest + Math.round((formData.valorMensual || 0));
 
   const formatCLP = (val) => {
     if (!val && val !== 0) return '';
@@ -141,35 +140,29 @@ const InformeHonorariosPrint = ({
         </div>
       </div>
 
-      {/* Printable Area Wrapper (Gray background for screen preview) */}
-      <div className="bg-gray-200/70 p-4 md:p-8 rounded-3xl print:p-0 print:bg-white print:m-0">
+      {/* Printable Area Wrapper with print isolation class */}
+      <div className="printable-document-area bg-gray-200/70 p-4 md:p-8 rounded-3xl print:p-0 print:bg-white print:m-0">
         
         {/* ════════════════════════════════════════════════════════════════════════════
             PÁGINA 1: INFORME PRESTACIÓN SERVICIOS
            ════════════════════════════════════════════════════════════════════════════ */}
-        <div className="w-[210mm] min-h-[297mm] bg-white p-10 md:p-12 mx-auto mb-8 shadow-2xl print:shadow-none print:m-0 print:p-8 print:w-full font-sans text-black relative flex flex-col justify-between break-after-page">
+        <div className="w-[210mm] min-h-[297mm] bg-white p-8 md:p-12 mx-auto mb-8 shadow-2xl print:shadow-none print:m-0 print:p-8 print:w-full font-sans text-black relative flex flex-col justify-between break-after-page">
           <div>
             
-            {/* Corporación Logo & Letterhead Header */}
+            {/* Corporación Logo Image & Letterhead Header */}
             <div className="border-b-2 border-black pb-1 mb-1">
               <div className="flex items-start justify-between">
-                <div className="space-y-0.5">
-                  {/* Styled Logo matching exact corporativo */}
-                  <div className="flex items-center gap-1">
-                    <span className="text-3xl font-black tracking-tighter text-[#2B2D6D] font-serif leading-none">CORP</span>
-                    <div className="w-5 h-5 bg-[#7CB342] flex items-center justify-center rounded-sm font-black text-white text-xs leading-none">
-                      +
-                    </div>
-                  </div>
-                  <div className="text-[11px] font-bold text-[#7CB342] leading-tight">
-                    Salud
-                  </div>
-                  <div className="text-[11px] font-bold text-[#2B2D6D] leading-tight">
-                    Municipal de
-                  </div>
-                  <div className="text-[11px] font-bold text-[#2B2D6D] leading-tight">
-                    Melipilla
-                  </div>
+                <div>
+                  <img 
+                    src="/img/logo_corporativo.png" 
+                    alt="Corporación Municipal de Melipilla" 
+                    className="h-16 w-auto object-contain mb-1"
+                    onError={(e) => {
+                      // Fallback if image path differs
+                      e.target.onerror = null;
+                      e.target.src = "/IMG/logo_corporativo.png";
+                    }}
+                  />
                 </div>
               </div>
               <p className="text-xs italic text-gray-500 mt-1 font-serif">
@@ -177,7 +170,7 @@ const InformeHonorariosPrint = ({
               </p>
             </div>
             
-            <p className="text-[9px] italic text-gray-400 mb-8 font-serif leading-tight">
+            <p className="text-[9px] italic text-gray-400 mb-6 font-serif leading-tight">
               Eleuterio Ramírez N°0387<br />
               Población. Manuel Rodríguez<br />
               Melipilla / Fono: 224897900
@@ -191,7 +184,7 @@ const InformeHonorariosPrint = ({
             </div>
 
             {/* General Info Fields (Vertical Alignment of Colons) */}
-            <div className="my-8 space-y-1.5 text-sm font-medium">
+            <div className="my-6 space-y-1.5 text-sm font-medium">
               <div className="flex items-center">
                 <span className="w-28 font-bold text-black uppercase text-xs tracking-wider">NOMBRE</span>
                 <span className="mr-2 font-bold">:</span>
@@ -269,7 +262,7 @@ const InformeHonorariosPrint = ({
             </div>
 
             {/* Section: Valores del Servicio */}
-            <div className="mt-8 mb-4">
+            <div className="mt-6 mb-4">
               <h3 className="font-bold text-sm text-black underline mb-3">Valores del Servicio:</h3>
 
               {/* Side-by-side Tables Grid */}
@@ -403,7 +396,7 @@ const InformeHonorariosPrint = ({
             </div>
 
             {/* Firmas Block Page 1: 3 horizontal signature lines */}
-            <div className="mt-20 mb-8 pt-12 flex justify-between items-end text-center text-[10px] font-bold tracking-tight">
+            <div className="mt-16 mb-6 pt-10 flex justify-between items-end text-center text-[10px] font-bold tracking-tight">
               
               {/* Signature 1 */}
               <div className="w-[30%] space-y-1">
@@ -431,7 +424,7 @@ const InformeHonorariosPrint = ({
             </div>
 
             {/* Datos Personales Para Pago Con Transferencia Bancaria */}
-            <div className="my-6 pt-4 border-t border-gray-300 space-y-1 text-xs">
+            <div className="my-4 pt-3 border-t border-gray-300 space-y-1 text-xs">
               <h4 className="font-extrabold uppercase text-black underline mb-2">
                 DATOS PERSONALES PARA PAGO CON TRANSFERENCIA BANCARIA
               </h4>
@@ -512,7 +505,7 @@ const InformeHonorariosPrint = ({
             </div>
 
             {/* Fecha and Disclaimer note */}
-            <div className="mt-6 text-[10px] space-y-2 font-sans">
+            <div className="mt-4 text-[10px] space-y-1.5 font-sans">
               <p className="font-semibold text-black">
                 FECHA: Día: <span className="font-bold">{formData.fechaDia}</span> Mes: <span className="font-bold">{formData.fechaMes}</span> Año: <span className="font-bold">{formData.fechaAño}</span>
               </p>
@@ -523,7 +516,7 @@ const InformeHonorariosPrint = ({
           </div>
 
           {/* Footer Page Number */}
-          <div className="text-right pt-4 text-xs font-bold text-black">
+          <div className="text-right pt-2 text-xs font-bold text-black">
             Página 1
           </div>
         </div>
@@ -532,28 +525,22 @@ const InformeHonorariosPrint = ({
         {/* ════════════════════════════════════════════════════════════════════════════
             PÁGINA 2: DETALLE DE LAS PRESTACIÓNES REALIZADAS
            ════════════════════════════════════════════════════════════════════════════ */}
-        <div className="w-[210mm] min-h-[297mm] bg-white p-10 md:p-12 mx-auto shadow-2xl print:shadow-none print:m-0 print:p-8 print:w-full font-sans text-black relative flex flex-col justify-between">
+        <div className="w-[210mm] min-h-[297mm] bg-white p-8 md:p-12 mx-auto shadow-2xl print:shadow-none print:m-0 print:p-8 print:w-full font-sans text-black relative flex flex-col justify-between">
           <div>
             
-            {/* Corporación Logo & Letterhead Header */}
+            {/* Corporación Logo Image & Letterhead Header */}
             <div className="border-b-2 border-black pb-1 mb-1">
               <div className="flex items-start justify-between">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-1">
-                    <span className="text-3xl font-black tracking-tighter text-[#2B2D6D] font-serif leading-none">CORP</span>
-                    <div className="w-5 h-5 bg-[#7CB342] flex items-center justify-center rounded-sm font-black text-white text-xs leading-none">
-                      +
-                    </div>
-                  </div>
-                  <div className="text-[11px] font-bold text-[#7CB342] leading-tight">
-                    Salud
-                  </div>
-                  <div className="text-[11px] font-bold text-[#2B2D6D] leading-tight">
-                    Municipal de
-                  </div>
-                  <div className="text-[11px] font-bold text-[#2B2D6D] leading-tight">
-                    Melipilla
-                  </div>
+                <div>
+                  <img 
+                    src="/img/logo_corporativo.png" 
+                    alt="Corporación Municipal de Melipilla" 
+                    className="h-16 w-auto object-contain mb-1"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "/IMG/logo_corporativo.png";
+                    }}
+                  />
                 </div>
               </div>
               <p className="text-xs italic text-gray-500 mt-1 font-serif">
@@ -561,7 +548,7 @@ const InformeHonorariosPrint = ({
               </p>
             </div>
             
-            <p className="text-[9px] italic text-gray-400 mb-8 font-serif leading-tight">
+            <p className="text-[9px] italic text-gray-400 mb-6 font-serif leading-tight">
               Eleuterio Ramírez N°0387<br />
               Población. Manuel Rodríguez<br />
               Melipilla / Fono: 224897900
@@ -575,7 +562,7 @@ const InformeHonorariosPrint = ({
             </div>
 
             {/* General Info Fields (Same vertical alignment) */}
-            <div className="my-8 space-y-1.5 text-sm font-medium">
+            <div className="my-6 space-y-1.5 text-sm font-medium">
               <div className="flex items-center">
                 <span className="w-28 font-bold text-black uppercase text-xs tracking-wider">NOMBRE</span>
                 <span className="mr-2 font-bold">:</span>
@@ -636,7 +623,7 @@ const InformeHonorariosPrint = ({
             </div>
 
             {/* Firmas Block Page 2: 2 horizontal signature lines */}
-            <div className="mt-32 mb-8 pt-12 flex justify-around items-end text-center text-[10px] font-bold tracking-tight">
+            <div className="mt-28 mb-6 pt-10 flex justify-around items-end text-center text-[10px] font-bold tracking-tight">
               
               {/* Signature 1 */}
               <div className="w-[38%] space-y-1">
@@ -658,7 +645,7 @@ const InformeHonorariosPrint = ({
           </div>
 
           {/* Footer Page Number */}
-          <div className="text-right pt-4 text-xs font-bold text-black">
+          <div className="text-right pt-2 text-xs font-bold text-black">
             Página 2
           </div>
         </div>
