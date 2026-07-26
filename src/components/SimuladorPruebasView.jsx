@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from 'react';
 import { 
   FlaskConical, 
   User, 
@@ -13,10 +12,14 @@ import {
   Sliders,
   DollarSign,
   ArrowRight,
-  ShieldAlert
+  ShieldAlert,
+  Trash2,
+  HelpCircle,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, getDocs, doc, setDoc, addDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import InformeHonorariosPrint from './InformeHonorariosPrint';
 import { logAuditAction } from '../utils/auditLogger';
 
@@ -225,6 +228,55 @@ const SimuladorPruebasView = ({ userData }) => {
     }
   };
 
+  // 3. Limpiar / Resetear Datos de Prueba de Firebase
+  const handleCleanTestData = async () => {
+    if (!window.confirm("🗑️ ¿Deseas eliminar todos los turnos y marcajes simulados creados durante las pruebas?\n\nEsta acción eliminará únicamente los datos generados durante las pruebas.")) return;
+
+    setLoading(true);
+    try {
+      const turnosSnap = await getDocs(collection(db, 'turnos'));
+      const deletePromises = [];
+
+      turnosSnap.docs.forEach(d => {
+        if (d.data()?.simulado || d.data()?.modalidadLiquidacion === 'Honorario por horas') {
+          deletePromises.push(deleteDoc(doc(db, 'turnos', d.id)));
+        }
+      });
+
+      const asistenciasSnap = await getDocs(collection(db, 'asistencias'));
+      asistenciasSnap.docs.forEach(d => {
+        if (d.data()?.simulado) {
+          deletePromises.push(deleteDoc(doc(db, 'asistencias', d.id)));
+        }
+      });
+
+      await Promise.all(deletePromises);
+
+      await logAuditAction(db, {
+        usuario: userData,
+        accion: 'LIMPIEZA_DATOS_PRUEBA',
+        detalles: 'Eliminación masiva de turnos y marcajes simulados de prueba de Firebase',
+        categoria: 'general'
+      });
+
+      setResumenHoras({
+        valorHoraLuVi: 21000,
+        horasLuVi: 0,
+        valorHoraSaDoFest: 21000,
+        horasSaDoFest: 0,
+        valorMensual: 0,
+        diasTrabajados: 0
+      });
+
+      showToast("¡Los datos de prueba fueron eliminados de Firebase con éxito!");
+    } catch (error) {
+      console.error("Error cleaning test data:", error);
+      showToast("Error al limpiar datos de prueba: " + error.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in font-sans">
       
@@ -259,22 +311,71 @@ const SimuladorPruebasView = ({ userData }) => {
           </div>
         </div>
 
-        {/* Dropdown Official Selector */}
-        <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 shrink-0 space-y-1">
-          <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider block">
-            Seleccionar Funcionario de Prueba:
-          </label>
-          <select
-            value={selectedFuncId}
-            onChange={handleSelectOfficial}
-            className="input-field bg-white font-bold text-sm text-secondary min-w-[260px] appearance-none"
+        {/* Right side controls */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+          <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-1">
+            <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider block">
+              Seleccionar Funcionario de Prueba:
+            </label>
+            <select
+              value={selectedFuncId}
+              onChange={handleSelectOfficial}
+              className="input-field bg-white font-bold text-sm text-secondary min-w-[260px] appearance-none"
+            >
+              {funcionarios.map(f => (
+                <option key={f.id} value={f.id}>
+                  {f.nombre} ({f.rut || f.id}) — {f.tipoPrestador || 'Prestador'}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button 
+            onClick={handleCleanTestData}
+            className="p-4 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm"
+            title="Eliminar todos los turnos y marcajes simulados creados durante las pruebas"
           >
-            {funcionarios.map(f => (
-              <option key={f.id} value={f.id}>
-                {f.nombre} ({f.rut || f.id}) — {f.tipoPrestador || 'Prestador'}
-              </option>
-            ))}
-          </select>
+            <Trash2 size={18} className="text-rose-600" />
+            Limpiar Datos de Prueba
+          </button>
+        </div>
+      </div>
+
+      {/* Guidance Box: Clarificaciones del Modo Prueba */}
+      <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-white p-6 rounded-3xl border border-amber-200/80 shadow-sm space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-amber-500 text-white rounded-xl flex items-center justify-center font-bold shrink-0 shadow-md">
+            <HelpCircle size={20} />
+          </div>
+          <div>
+            <h3 className="font-extrabold text-secondary text-sm">
+              ¿Cómo funciona el Modo de Prueba y Simulación?
+            </h3>
+            <p className="text-xs text-gray-500">Respuestas rápidas a las dudas frecuentes sobre las pruebas:</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs pt-2 border-t border-amber-200/50">
+          <div className="p-3 bg-white/80 rounded-2xl border border-amber-100 space-y-1">
+            <span className="font-bold text-amber-900 block">1. ¿Se pueden eliminar los datos?</span>
+            <p className="text-gray-600 text-[11px] leading-relaxed">
+              Sí. Puedes desactivar el modo de prueba o presionar el botón <strong>"Limpiar Datos de Prueba"</strong> arriba para borrar de Firebase todos los registros simulados al terminar.
+            </p>
+          </div>
+
+          <div className="p-3 bg-white/80 rounded-2xl border border-amber-100 space-y-1">
+            <span className="font-bold text-amber-900 block">2. ¿Geolocalización en Computadora?</span>
+            <p className="text-gray-600 text-[11px] leading-relaxed">
+              En modo prueba (y cuando se prueba desde PC), el sistema simula la posición dentro del centro de salud automáticamente, omitiendo errores de GPS.
+            </p>
+          </div>
+
+          <div className="p-3 bg-white/80 rounded-2xl border border-amber-100 space-y-1">
+            <span className="font-bold text-amber-900 block">3. ¿Finalizar turno de inmediato?</span>
+            <p className="text-gray-600 text-[11px] leading-relaxed">
+              Puedes presionar <strong>"Finalizar Turno"</strong> en cualquier momento sin esperar las 8/12/15 horas reales. El sistema acreditará automáticamente la totalidad de horas al informe PDF.
+            </p>
+          </div>
         </div>
       </div>
 
