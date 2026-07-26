@@ -15,6 +15,7 @@ import {
 import { calcularHorasTurno } from '../utils/timeUtils';
 import InformeHonorariosPrint from './InformeHonorariosPrint';
 import { logAuditAction } from '../utils/auditLogger';
+import { ROLES_FUNCION_TURNO, getInfoRolFuncion } from '../utils/escalaRemuneraciones';
 
 // ─── Shift & Schedule Definitions ─────────────────────────────────────────────
 
@@ -735,13 +736,33 @@ const GestionFuncionariosView = ({ userData }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Rol / Función en el Turno</label>
-                <input
-                  type="text"
-                  value={turnoForm.rolTurno}
-                  onChange={e => setTurnoForm(prev => ({ ...prev, rolTurno: e.target.value }))}
-                  placeholder="Ej: Enfermero Jefe, Refuerzo TENS, etc."
-                  className="w-full input-field bg-gray-50 text-xs font-bold text-secondary"
-                />
+                <select
+                  value={turnoForm.rolTurno || selectedFunc?.tipoPrestador || 'Administrativo'}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setTurnoForm(prev => ({ ...prev, rolTurno: val }));
+                  }}
+                  className="w-full input-field bg-white text-xs font-bold text-secondary border border-gray-200 focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                >
+                  <option value="">-- Seleccionar Rol / Función --</option>
+                  {ROLES_FUNCION_TURNO.map(r => (
+                    <option key={r.id} value={r.label}>
+                      {r.label} (Cat {r.categoria})
+                    </option>
+                  ))}
+                </select>
+
+                {/* Insignia dinámica de categoría y tarifa por hora */}
+                {(() => {
+                  const activeRol = turnoForm.rolTurno || selectedFunc?.tipoPrestador || 'Administrativo';
+                  const info = getInfoRolFuncion(activeRol);
+                  return (
+                    <div className="mt-1.5 p-2 bg-emerald-50/80 rounded-xl border border-emerald-200/80 text-[10px] font-medium text-emerald-900 flex items-center justify-between">
+                      <span className="font-bold">Cat {info.categoria} ({info.descripcion})</span>
+                      <span className="font-mono font-black text-emerald-700">${info.valorHoraNormal.toLocaleString()}/h</span>
+                    </div>
+                  );
+                })()}
               </div>
               <div>
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Centro de Salud</label>
