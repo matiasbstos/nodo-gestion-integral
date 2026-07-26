@@ -467,6 +467,13 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
   const [selectedShiftToAccept, setSelectedShiftToAccept] = React.useState(null);
 
   const handleOpenAcceptModal = (shift) => {
+    const estado = (shift?.estado || '').toLowerCase();
+    const tipoNovedad = (shift?.tipoNovedad || shift?.motivoNovedad || '').toLowerCase();
+    
+    if (['licencia', 'vacaciones', 'permiso', 'ausente'].includes(estado) || tipoNovedad.includes('licencia') || tipoNovedad.includes('vacaciones') || tipoNovedad.includes('permiso')) {
+      alert("🔒 Este turno se encuentra eximido y justificado por la Administración (Licencia Médica, Vacaciones o Permiso Administrativo). No requiere ni permite ser aceptado por el funcionario.");
+      return;
+    }
     setSelectedShiftToAccept(shift);
   };
 
