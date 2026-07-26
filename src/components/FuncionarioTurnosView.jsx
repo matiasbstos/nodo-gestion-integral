@@ -562,7 +562,11 @@ const FuncionarioTurnosView = ({ userData }) => {
               <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-2 text-xs">
                 <div className="flex justify-between">
                   <span className="text-gray-400 font-bold uppercase">Centro de Salud:</span>
-                  <span className="font-bold text-secondary">{selectedShiftToAccept.centroSalud || 'SAR Arpillerista'}</span>
+                  <span className="font-bold text-secondary">{selectedShiftToAccept.centroAsignacion || selectedShiftToAccept.centroSalud || 'SAR Arpillerista'}</span>
+                </div>
+                <div className="flex justify-between border-t border-gray-200/50 pt-1.5">
+                  <span className="text-gray-400 font-bold uppercase">Asignado Por:</span>
+                  <span className="font-bold text-primary">{selectedShiftToAccept.asignadoPor || selectedShiftToAccept.creadoPor || selectedShiftToAccept.creadorNombre || 'Administración Local SAR'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400 font-bold uppercase">Función / Rol:</span>
@@ -619,22 +623,36 @@ const FuncionarioTurnosView = ({ userData }) => {
                 </div>
               </div>
 
-              {/* Buttons */}
-              <div className="flex items-center gap-3 pt-2">
-                <button 
-                  onClick={() => setSelectedShiftToAccept(null)}
-                  className="flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  onClick={confirmAcceptTurno}
-                  disabled={submitting}
-                  className="flex-1 btn-primary py-3.5 text-xs font-bold uppercase tracking-wider rounded-2xl shadow-xl shadow-primary/20 flex items-center justify-center gap-2"
-                >
-                  {submitting ? <Loader2 className="animate-spin" /> : <><CheckCircle2 size={16} /> Confirmar & Aceptar Turno</>}
-                </button>
-              </div>
+              {/* Buttons (Fix Loop: If accepted, display confirmation badge & close button) */}
+              {selectedShiftToAccept.aceptado || selectedShiftToAccept.estado === 'programado' ? (
+                <div className="flex items-center justify-between gap-3 pt-2">
+                  <span className="px-4 py-3 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-black uppercase tracking-wider rounded-2xl flex items-center gap-1.5 shadow-sm">
+                    <CheckCircle2 size={16} /> Turno Ya Confirmado
+                  </span>
+                  <button 
+                    onClick={() => setSelectedShiftToAccept(null)}
+                    className="btn-primary py-3.5 px-6 text-xs font-bold uppercase tracking-wider rounded-2xl shadow-lg shadow-primary/20"
+                  >
+                    Entendido (Cerrar)
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 pt-2">
+                  <button 
+                    onClick={() => setSelectedShiftToAccept(null)}
+                    className="flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={confirmAcceptTurno}
+                    disabled={submitting}
+                    className="flex-1 btn-primary py-3.5 text-xs font-bold uppercase tracking-wider rounded-2xl shadow-xl shadow-primary/20 flex items-center justify-center gap-2"
+                  >
+                    {submitting ? <Loader2 className="animate-spin" /> : <><CheckCircle2 size={16} /> Confirmar & Aceptar Turno</>}
+                  </button>
+                </div>
+              )}
 
             </div>
           </div>

@@ -342,6 +342,37 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
     if (!turnoToStart) {
       return showNotify("No tienes ningún turno aceptado en tu agenda.", "Sin Turno Activo", "warning");
     }
+
+    // VERIFICACIÓN DE FECHA Y HORA DE MARCAJE (Item 4)
+    const now = new Date();
+    const esModoPrueba = Boolean(userData?.modoPruebaActivo || userData?.esPrueba || turnoToStart.id === 'mock-123');
+
+    if (!esModoPrueba && turnoToStart.inicio) {
+      const inicioTurno = new Date(turnoToStart.inicio);
+      const terminoTurno = turnoToStart.termino ? new Date(turnoToStart.termino) : new Date(inicioTurno.getTime() + 12 * 3600 * 1000);
+      
+      // Ventana de marcaje: Desde 2 horas antes del inicio hasta la hora de término del turno
+      const ventanaInicio = new Date(inicioTurno.getTime() - 2 * 60 * 60 * 1000);
+      const ventanaFin = new Date(terminoTurno.getTime());
+
+      if (now < ventanaInicio) {
+        const fechaFormat = inicioTurno.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+        const horaFormat = inicioTurno.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return showNotify(
+          `⏰ Marcaje No Disponible Aún:\nEste turno está programado para el ${fechaFormat} a las ${horaFormat}.\nPodrás marcar entrada únicamente durante la ventana de tiempo del turno (desde 2 horas antes de su inicio).`,
+          "Fuera de Horario",
+          "warning"
+        );
+      }
+
+      if (now > ventanaFin) {
+        return showNotify(
+          "⚠️ El tiempo límite de este turno ha expirado. Si asististe a este turno, por favor contacta al Administrador Local para registrar el marcaje manual.",
+          "Turno Expirado",
+          "warning"
+        );
+      }
+    }
     
     try {
       if (turnoToStart.id === 'mock-123') {
@@ -355,7 +386,7 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
       await updateDoc(doc(db, 'turnos', turnoToStart.id), {
         estado: 'en_curso',
         entradaReal: serverTimestamp(),
-        ubicacionEntrada: userLocation || centerLocation
+        ubicacionEntrada: userLocation || centerLocation || { lat: -33.6117, lng: -70.7455 }
       });
       setEntryTime(new Date());
       setIsShiftActive(true);
@@ -367,6 +398,9 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
   };
 
   const handleEndShift = async (instant = false) => {
+    // Garantizar valor booleano evitando SyntheticBaseEvent de React
+    const isInstant = typeof instant === 'boolean' ? instant : false;
+
     // INTERCEPCIÓN TUTORIAL: Cortocircuito temprano
     if (userData?.modoPruebaActivo && pasoTutorial === 4) {
       setMockShift(prev => ({ ...prev, estado: 'completado', salidaReal: Timestamp.now() }));
@@ -384,17 +418,17 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
       await updateDoc(doc(db, 'turnos', currentTurnoHoy.id), {
         estado: 'completado',
         salidaReal: serverTimestamp(),
-        ubicacionSalida: userLocation || centerLocation,
+        ubicacionSalida: userLocation || centerLocation || { lat: -33.6117, lng: -70.7455 },
         duracionRealMs: new Date() - (entryTime || new Date()),
-        completadoSimulado: instant
+        completadoSimulado: isInstant
       });
       setIsShiftActive(false);
       setEntryTime(null);
       setElapsedTime('00:00:00');
-      showNotify(instant ? "¡Turno finalizado inmediatamente! Las horas se computaron al informe." : "Turno finalizado correctamente.", "Salida Registrada", "success");
+      showNotify(isInstant ? "¡Turno finalizado inmediatamente! Las horas se computaron al informe." : "Turno finalizado correctamente.", "Salida Registrada", "success");
     } catch (err) {
       console.error(err);
-      showNotify("Error al marcar salida.", "Error en Marcaje", "error");
+      showNotify("Error al marcar salida: " + err.message, "Error en Marcaje", "error");
     }
   };
 
@@ -1157,6 +1191,10 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
                   <span className="text-gray-400 font-bold uppercase">Centro de Salud:</span>
                   <span className="font-bold text-secondary">{selectedShiftToAccept.centroAsignacion || selectedShiftToAccept.centroSalud || 'SAR Arpillerista'}</span>
                 </div>
+                <div className="flex justify-between border-t border-gray-200/50 pt-1.5">
+                  <span className="text-gray-400 font-bold uppercase">Asignado Por:</span>
+                  <span className="font-bold text-primary">{selectedShiftToAccept.asignadoPor || selectedShiftToAccept.creadoPor || selectedShiftToAccept.creadorNombre || 'Administración Local SAR'}</span>
+                </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400 font-bold uppercase">Función / Rol:</span>
                   <span className="font-bold text-primary">{proyeccion.rolLabel} (Cat {proyeccion.categoria})</span>
@@ -1212,21 +1250,35 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
                 </div>
               </div>
 
-              {/* Buttons */}
-              <div className="flex items-center gap-3 pt-2">
-                <button 
-                  onClick={() => setSelectedShiftToAccept(null)}
-                  className="flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  onClick={confirmAcceptShift}
-                  className="flex-1 btn-primary py-3.5 text-xs font-bold uppercase tracking-wider rounded-2xl shadow-xl shadow-primary/20 flex items-center justify-center gap-2"
-                >
-                  <CheckCircle2 size={16} /> Confirmar & Aceptar Turno
-                </button>
-              </div>
+              {/* Buttons (Fix Loop: If accepted, display confirmation badge & close button) */}
+              {selectedShiftToAccept.aceptado || selectedShiftToAccept.estado === 'programado' ? (
+                <div className="flex items-center justify-between gap-3 pt-2">
+                  <span className="px-4 py-3 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-black uppercase tracking-wider rounded-2xl flex items-center gap-1.5 shadow-sm">
+                    <CheckCircle2 size={16} /> Turno Ya Confirmado
+                  </span>
+                  <button 
+                    onClick={() => setSelectedShiftToAccept(null)}
+                    className="btn-primary py-3.5 px-6 text-xs font-bold uppercase tracking-wider rounded-2xl shadow-lg shadow-primary/20"
+                  >
+                    Entendido (Cerrar)
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 pt-2">
+                  <button 
+                    onClick={() => setSelectedShiftToAccept(null)}
+                    className="flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={confirmAcceptShift}
+                    className="flex-1 btn-primary py-3.5 text-xs font-bold uppercase tracking-wider rounded-2xl shadow-xl shadow-primary/20 flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle2 size={16} /> Confirmar & Aceptar Turno
+                  </button>
+                </div>
+              )}
 
             </div>
           </div>
