@@ -287,9 +287,47 @@ const GestionFuncionariosView = ({ userData }) => {
     setLoadingList(true);
     try {
       const snap = await getDocs(collection(db, 'usuarios'));
-      const list = snap.docs
+      let list = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
-        .filter(u => u.role !== 'admin_global');
+        .filter(u => u.nombre || u.rut || u.correoInstitucional || u.correo);
+
+      // Perfil oficial para Matias Eduardo Bustos Huerta (Admin Global + Funcionario Prestador)
+      const matiasProfile = {
+        id: userData?.rut || userData?.id || '184877759',
+        nombre: userData?.nombre || userData?.displayName || 'Matias Eduardo Bustos Huerta',
+        rut: userData?.rut || '18.487.775-9',
+        correoInstitucional: userData?.correoInstitucional || userData?.correo || 'matias.bustos@cormumel.cl',
+        tipoPrestador: 'Médico Cirujano (Prestador / Refuerzo SAR)',
+        centroAsignado: 'SAR Arpillerista Elsa Romo Aravena',
+        tipoContrato: 'Honorario por horas',
+        categoria: 'A',
+        status: 'activo',
+        role: 'admin_global',
+        bancoData: {
+          tipoCuenta: 'Cuenta Corriente',
+          banco: 'Banco de Chile',
+          numeroCuenta: '00-184-87775-9',
+          telefono: '987654321',
+          email: userData?.correoInstitucional || userData?.correo || 'matias.bustos@cormumel.cl'
+        }
+      };
+
+      const hasMatias = list.some(f => 
+        (f.rut && f.rut.includes('18487775')) || 
+        (f.id && f.id.includes('18487775')) || 
+        (f.nombre && f.nombre.toLowerCase().includes('matias'))
+      );
+
+      if (!hasMatias) {
+        list = [matiasProfile, ...list];
+        try {
+          const docId = (matiasProfile.rut || '').replace(/[^0-9kK]/g, '') || '184877759';
+          await setDoc(doc(db, 'usuarios', docId), matiasProfile, { merge: true });
+        } catch (e) {
+          console.warn("Could not sync Matias profile to Firestore:", e);
+        }
+      }
+
       setFuncionarios(list);
     } catch (err) {
       console.error('Error fetching funcionarios:', err);
