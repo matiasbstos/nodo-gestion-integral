@@ -522,9 +522,31 @@ const PautaTurnosView = ({ userData }) => {
                             </button>
                           </div>
                           
-                          {dayTurns.filter(t => t.horaInicio === '17:00' || t.nombreHorario === 'Semana largo' || t.tipoTurno === 'Turno 1').length > 0 ? (
-                            dayTurns.map(t => {
+                          {dayTurns.filter(t => (t.horaInicio === '17:00' || t.nombreHorario === 'Semana largo' || t.tipoTurno === 'Turno 1') && t.estado !== 'reemplazado').length > 0 ? (
+                            dayTurns.filter(t => (t.horaInicio === '17:00' || t.nombreHorario === 'Semana largo' || t.tipoTurno === 'Turno 1') && t.estado !== 'reemplazado').map(t => {
+                              const isVacant = ['licencia_medica', 'permiso_administrativo', 'vacaciones', 'ausente'].includes(t.estado);
                               const cfg = getShiftConfig(t.tipoTurno);
+
+                              if (isVacant) {
+                                return (
+                                  <div key={t.id} className="p-1.5 rounded-xl border border-rose-300 bg-rose-100 text-rose-900 text-xs flex items-center justify-between shadow-sm">
+                                    <div className="truncate">
+                                      <p className="font-black text-[10px] text-rose-800 flex items-center gap-1 truncate">
+                                        <AlertTriangle size={10} className="text-rose-600 shrink-0" /> VACANTE: {t.nombreFuncionario?.split(' ')[0]}
+                                      </p>
+                                      <p className="text-[8px] font-bold text-rose-600 uppercase">{t.estado?.replace('_', ' ')}</p>
+                                    </div>
+                                    <button 
+                                      onClick={() => setShowReassignModal(t)}
+                                      className="px-1.5 py-0.5 bg-rose-600 text-white text-[9px] font-bold rounded hover:bg-rose-700 ml-1 shrink-0 uppercase"
+                                      title="Asignar Reemplazo"
+                                    >
+                                      + Reemplazar
+                                    </button>
+                                  </div>
+                                );
+                              }
+
                               return (
                                 <div 
                                   key={t.id}
@@ -729,9 +751,45 @@ const PautaTurnosView = ({ userData }) => {
                         assignedTurns.map(t => {
                           const isIncident = ['licencia_medica', 'permiso_administrativo', 'vacaciones', 'ausente'].includes(t.estado);
                           const isReplaced = t.estado === 'reemplazado';
+
+                          if (isIncident) {
+                            return (
+                              <div key={t.id} className="p-3.5 rounded-2xl border border-rose-300 bg-rose-50 text-rose-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2 bg-rose-100 text-rose-700 rounded-xl">
+                                    <AlertTriangle size={20} />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-black text-xs uppercase text-rose-700 tracking-wider">⚠️ CARGO VACANTE</span>
+                                      <span className="text-[9px] bg-rose-600 text-white px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                        {t.estado?.replace('_', ' ')}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs font-semibold text-rose-900 mt-0.5">
+                                      Funcionario ausente: <strong className="font-extrabold">{t.nombreFuncionario}</strong> {t.motivoIncidencia ? `(${t.motivoIncidencia})` : ''}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 self-end sm:self-auto">
+                                  <button
+                                    onClick={() => setShowReassignModal(t)}
+                                    className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1.5 uppercase tracking-wider"
+                                  >
+                                    <RefreshCw size={14} /> + Asignar Reemplazo
+                                  </button>
+                                  <button onClick={(e) => handleDeleteTurnFromPauta(e, t.id)} className="p-1.5 text-rose-400 hover:text-rose-700 hover:bg-rose-100 rounded-lg">
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          }
+
                           return (
                             <div key={t.id} className={`p-3 rounded-xl border flex items-center justify-between ${
-                              isIncident ? 'bg-rose-50 border-rose-200 text-rose-900' : isReplaced ? 'bg-gray-100 border-gray-200 text-gray-400' : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                              isReplaced ? 'bg-gray-100 border-gray-200 text-gray-400' : 'bg-emerald-50 border-emerald-200 text-emerald-900'
                             }`}>
                               <div>
                                 <p className="font-extrabold text-sm">{t.nombreFuncionario}</p>
@@ -740,12 +798,12 @@ const PautaTurnosView = ({ userData }) => {
 
                               <div className="flex items-center gap-2">
                                 <span className={`text-[9px] font-bold uppercase px-2.5 py-0.5 rounded-full ${
-                                  isIncident ? 'bg-rose-600 text-white' : isReplaced ? 'bg-gray-300 text-gray-700' : 'bg-emerald-600 text-white'
+                                  isReplaced ? 'bg-gray-300 text-gray-700' : 'bg-emerald-600 text-white'
                                 }`}>
                                   {t.estado?.replace('_', ' ')}
                                 </span>
 
-                                {!isIncident && !isReplaced && (
+                                {!isReplaced && (
                                   <button
                                     onClick={() => setShowIncidenceModal(t)}
                                     className="px-2.5 py-1 text-[10px] font-bold uppercase bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 rounded-lg"

@@ -173,11 +173,12 @@ const isValidEmailDomain = (email = '') => {
 };
 
 // ─── Novedad type map ───────────────────────────────────────────────────────────
-const NOVEDAD_TIPO = {
+export const NOVEDAD_TIPO = {
   licencias:     'licencia_medica',
-  vacaciones:    'vacacion',
-  inasistencias: 'inasistencia',
-  marcaje:       'marcaje',
+  vacaciones:    'vacaciones',
+  permiso:       'permiso_administrativo',
+  inasistencias: 'ausente',
+  marcaje:       'ausente',
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1012,25 +1013,68 @@ const GestionFuncionariosView = ({ userData }) => {
 
   const handleAddNovedad = async () => {
     if (!novedadForm.fechaInicio) return showToast('Selecciona la fecha de inicio.', 'warning');
-    const rut = selectedFunc?.rut || selectedFunc?.id;
-    const tipo = NOVEDAD_TIPO[activeTab];
+    const rawRut = selectedFunc?.rut || selectedFunc?.id || '';
+    const cleanRut = rawRut.replace(/[^0-9kK]/g, '');
+    const tipo = NOVEDAD_TIPO[activeTab] || 'licencia_medica';
+    const fechaFinStr = novedadForm.fechaFin || novedadForm.fechaInicio;
+
     setSavingNovedad(true);
     try {
+      // 1. Insert novelty record
       await addDoc(collection(db, 'novedades'), {
-        rut,
+        rut: cleanRut,
+        rutFuncionario: cleanRut,
         nombreFuncionario: selectedFunc.nombre,
         tipo,
         fechaInicio: novedadForm.fechaInicio,
-        fechaFin: novedadForm.fechaFin || novedadForm.fechaInicio,
+        fechaFin: fechaFinStr,
         observacion: novedadForm.observacion || '',
         estado: 'registrado',
         creadoPor: userData?.rut || userData?.id || '',
         createdAt: new Date().toISOString()
       });
+
+      // 2. Automatically find and free assigned turnos for this official in date range
+      const turnosSnap = await getDocs(collection(db, 'turnos'));
+      const startN = new Date(`${novedadForm.fechaInicio}T00:00:00`).getTime();
+      const endN = new Date(`${fechaFinStr}T23:59:59`).getTime();
+
+      let freedCount = 0;
+      for (const turnDoc of turnosSnap.docs) {
+        const turnData = turnDoc.data();
+        const tRut = (turnData.rut || turnData.rutFuncionario || '').replace(/[^0-9kK]/g, '');
+        
+        if (tRut === cleanRut && turnData.estado !== 'reemplazado') {
+          const tFecha = turnData.fecha || (turnData.inicio ? turnData.inicio.split('T')[0] : '');
+          if (tFecha) {
+            const tTime = new Date(`${tFecha}T12:00:00`).getTime();
+            if (tTime >= startN && tTime <= endN) {
+              await updateDoc(doc(db, 'turnos', turnDoc.id), {
+                estado: tipo,
+                motivoIncidencia: novedadForm.observacion || tipo,
+                updatedAt: serverTimestamp()
+              });
+              freedCount++;
+            }
+          }
+        }
+      }
+
       setNovedadForm({ fechaInicio: '', fechaFin: '', observacion: '' });
-      setTabData(prev => { const n = { ...prev }; delete n[activeTab]; return n; });
-      showToast('Novedad registrada con éxito.', 'success');
+      setTabData(prev => { 
+        const n = { ...prev }; 
+        delete n[activeTab]; 
+        delete n['turnos']; 
+        return n; 
+      });
+
+      const extraMsg = freedCount > 0 
+        ? ` ¡Se liberaron ${freedCount} turno(s) dejando el cargo vacante en la Pauta para asignación de reemplazo!`
+        : '';
+
+      showToast(`Incidencia registrada con éxito.${extraMsg}`, 'success');
     } catch (err) {
+      console.error("Error al registrar incidencia y liberar puestos en turnos:", err);
       showToast('Error al registrar: ' + err.message, 'error');
     } finally {
       setSavingNovedad(false);
