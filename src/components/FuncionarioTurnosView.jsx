@@ -8,6 +8,8 @@ import { logAuditAction } from '../utils/auditLogger';
 const FuncionarioTurnosView = ({ userData }) => {
   const [turnos, setTurnos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [vistaModo, setVistaModo] = useState('lista'); // 'lista' o 'calendario'
+  const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
 
   useEffect(() => {
     if (!userData?.rut) return;
@@ -271,31 +273,168 @@ const FuncionarioTurnosView = ({ userData }) => {
     }
   };
 
+  const handlePrevMonth = () => {
+    setCurrentMonthDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonthDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  // Filtrar turnos por el mes seleccionado en la navegación
+  const turnosMesSeleccionado = turnos.filter(t => {
+    const d = t.inicio ? new Date(t.inicio) : (t.fecha ? new Date(t.fecha) : null);
+    if (!d) return true;
+    return d.getFullYear() === currentMonthDate.getFullYear() && d.getMonth() === currentMonthDate.getMonth();
+  });
+
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-8 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-bold text-secondary">Mis Turnos Asignados</h1>
-        <p className="text-gray-500 mt-1">Consulta tu agenda mensual y centros de asignación.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-secondary">Mis Turnos Asignados</h1>
+          <p className="text-gray-500 mt-1">Consulta tu agenda mensual y centros de asignación en vista lista o grilla.</p>
+        </div>
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
+        <div className="p-6 bg-gray-50/50 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <button className="p-2 hover:bg-white rounded-xl transition-colors border border-transparent hover:border-gray-200">
+            <button onClick={handlePrevMonth} className="p-2 hover:bg-white rounded-xl transition-colors border border-transparent hover:border-gray-200">
               <ChevronLeft size={20} />
             </button>
-            <h2 className="font-bold text-secondary text-lg">Mayo 2026</h2>
-            <button className="p-2 hover:bg-white rounded-xl transition-colors border border-transparent hover:border-gray-200">
+            <h2 className="font-bold text-secondary text-lg capitalize">
+              {currentMonthDate.toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}
+            </h2>
+            <button onClick={handleNextMonth} className="p-2 hover:bg-white rounded-xl transition-colors border border-transparent hover:border-gray-200">
               <ChevronRight size={20} />
             </button>
           </div>
-          <div className="flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-xl text-primary text-xs font-bold uppercase">
-            <Info size={14} />
-            <span>{turnos.length} Turnos este mes</span>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 bg-gray-200/60 p-1 rounded-2xl">
+              <button 
+                onClick={() => setVistaModo('lista')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  vistaModo === 'lista' ? 'bg-white text-secondary shadow-sm' : 'text-gray-500 hover:text-secondary'
+                }`}
+              >
+                📋 Lista
+              </button>
+              <button 
+                onClick={() => setVistaModo('calendario')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  vistaModo === 'calendario' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-secondary'
+                }`}
+              >
+                📅 Grilla de Mes
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 bg-primary/10 px-4 py-2.5 rounded-xl text-primary text-xs font-bold uppercase">
+              <Info size={14} />
+              <span>{turnosMesSeleccionado.length} Turnos este mes</span>
+            </div>
           </div>
         </div>
 
-        <div className="divide-y divide-gray-50">
+        {/* VISTA 1: GRILLA DE CALENDARIO MENSUAL */}
+        {vistaModo === 'calendario' ? (
+          <div className="p-6">
+            <div className="grid grid-cols-7 gap-2 text-center text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+              <div>Lun</div>
+              <div>Mar</div>
+              <div>Mié</div>
+              <div>Jue</div>
+              <div>Vie</div>
+              <div className="text-rose-400">Sáb</div>
+              <div className="text-rose-400">Dom</div>
+            </div>
+
+            {(() => {
+              const year = currentMonthDate.getFullYear();
+              const month = currentMonthDate.getMonth();
+
+              const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7; // Monday = 0
+              const daysInMonth = new Date(year, month + 1, 0).getDate();
+              const todayStr = new Date().toISOString().split('T')[0];
+
+              const gridCells = [];
+              for (let i = 0; i < firstDayIndex; i++) {
+                gridCells.push(<div key={`empty-${i}`} className="min-h-[100px] bg-gray-50/40 rounded-2xl border border-dashed border-gray-100"></div>);
+              }
+
+              for (let day = 1; day <= daysInMonth; day++) {
+                const dateObj = new Date(year, month, day);
+                const dateStr = dateObj.toISOString().split('T')[0];
+                const isToday = dateStr === todayStr;
+
+                const turnosDelDia = turnos.filter(t => {
+                  const td = t.inicio ? new Date(t.inicio).toISOString().split('T')[0] : (t.fecha || '');
+                  return td === dateStr;
+                });
+
+                gridCells.push(
+                  <div 
+                    key={`day-${day}`}
+                    className={`min-h-[100px] p-2 rounded-2xl border transition-all flex flex-col justify-between ${
+                      isToday 
+                        ? 'bg-emerald-50/70 border-2 border-emerald-400 shadow-md ring-2 ring-emerald-300/50' 
+                        : turnosDelDia.length > 0 
+                        ? 'bg-white border-gray-200 shadow-sm hover:border-primary/50' 
+                        : 'bg-white/60 border-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
+                        isToday 
+                          ? 'bg-emerald-600 text-white shadow-sm animate-pulse' 
+                          : 'text-secondary'
+                      }`}>
+                        {day}
+                      </span>
+                      {isToday && <span className="text-[9px] font-black uppercase tracking-tighter text-emerald-700">HOY</span>}
+                    </div>
+
+                    <div className="space-y-1.5 mt-2">
+                      {turnosDelDia.map(turno => {
+                        const novedadInfo = getTurnoNovedadInfo(turno);
+                        const tipoTurnoName = turno.tipoTurno || turno.turno || turno.tipo;
+                        let badgeColor = 'bg-emerald-100 text-emerald-900 border-emerald-300';
+                        if (tipoTurnoName === 'Turno 2' || tipoTurnoName === 'Turno B') badgeColor = 'bg-amber-100 text-amber-900 border-amber-300';
+                        if (tipoTurnoName === 'Turno 3' || tipoTurnoName === 'Turno C') badgeColor = 'bg-sky-100 text-sky-900 border-sky-300';
+                        if (tipoTurnoName === 'Refuerzo') badgeColor = 'bg-purple-100 text-purple-900 border-purple-300';
+
+                        if (novedadInfo) {
+                          return (
+                            <div key={turno.id} className={`p-1.5 rounded-xl border text-[10px] font-bold ${novedadInfo.badgeClass}`}>
+                              {novedadInfo.tipoLabel}
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <button
+                            key={turno.id}
+                            onClick={() => handleOpenAcceptModal(turno)}
+                            className={`w-full text-left p-1.5 rounded-xl border text-[10px] font-extrabold transition-all hover:scale-[1.02] shadow-2xs ${badgeColor}`}
+                          >
+                            <div className="truncate">{tipoTurnoName}</div>
+                            <div className="text-[9px] font-medium opacity-80">{turno.centroAsignacion || turno.centroSalud || 'SAR'}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }
+
+              return <div className="grid grid-cols-7 gap-2">{gridCells}</div>;
+            })()}
+          </div>
+        ) : (
+          /* VISTA 2: LISTA DE TURNOS */
+          <div className="divide-y divide-gray-50">
           {loading ? (
             <div className="p-12 text-center text-gray-400">Cargando tu agenda...</div>
           ) : turnos.length > 0 ? (
@@ -460,6 +599,7 @@ const FuncionarioTurnosView = ({ userData }) => {
             <div className="p-12 text-center text-gray-400">No tienes turnos programados.</div>
           )}
         </div>
+      )}
       </div>
 
       {/* Modal de Cancelación */}

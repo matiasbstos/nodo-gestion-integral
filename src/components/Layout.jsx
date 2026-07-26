@@ -10,6 +10,7 @@ const Layout = ({ children, activeView, setActiveView, onLogout, userData, pasoT
     profile: 'Configuración de Perfil',
     fees: 'Honorarios y Reportes',
     reports: 'Mis Informes',
+    'admin-dashboard': 'Resumen Consolidado Operativo',
     'pauta-turnos': 'Pauta de Turnos Mensual',
     simulador: 'Simulador de Pruebas & Pruebas en Vivo',
     auditoria: 'Registro de Auditoría & Trazabilidad'

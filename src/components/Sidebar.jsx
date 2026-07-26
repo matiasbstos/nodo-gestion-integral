@@ -28,7 +28,7 @@ const Sidebar = ({ activeView, setActiveView, onLogout, userData, isOpen, onClos
   const isAdmin = userData?.role === 'admin_global';
 
   const menuItems = isAdmin ? [
-    { id: 'admin-dashboard', label: 'Dashboard Consolidado', icon: Activity },
+    { id: 'admin-dashboard', label: 'Resumen Consolidado Operativo', icon: Activity },
     { id: 'admin-funcionarios', label: 'Funcionarios', icon: Users },
     { id: 'pauta-turnos', label: 'Pauta de Turnos', icon: Calendar },
     { id: 'simulador', label: 'Simulador de Pruebas', icon: FlaskConical },

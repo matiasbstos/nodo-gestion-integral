@@ -18,8 +18,9 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import InformeHonorariosPrint from './InformeHonorariosPrint';
+import { calcularProyeccionTurno } from '../utils/escalaRemuneraciones';
 
 const MisHonorariosView = ({ userData }) => {
   const [asistencias, setAsistencias] = useState([]);
@@ -39,31 +40,35 @@ const MisHonorariosView = ({ userData }) => {
       try {
         const cleanRut = userData.rut.replace(/[^0-9kK]/g, '');
         
-        // Query turnos completados
+        // Query turnos del funcionario
         const q = query(
           collection(db, 'turnos'),
-          where('rutFuncionario', '==', cleanRut),
-          where('estado', 'in', ['completado', 'completado_manual']),
-          orderBy('fechaInicio', 'desc')
+          where('rutFuncionario', '==', cleanRut)
         );
 
         const querySnapshot = await getDocs(q);
         const docs = querySnapshot.docs.map(doc => {
           const data = doc.id ? { id: doc.id, ...doc.data() } : doc.data();
+          const proy = calcularProyeccionTurno(data, userData);
           
-          // Cálculo dinámico de horas y montos
-          const inicio = data.fechaInicio?.toDate();
-          const fin = data.fechaFin?.toDate();
-          const horasValidadas = data.horasValidadas || (fin && inicio ? (fin - inicio) / 3600000 : 0);
-          const valorHora = data.valorHoraAplicado || userData.valorHora || 0;
+          const fechaObj = data.fechaInicio?.toDate 
+            ? data.fechaInicio.toDate() 
+            : data.inicio ? new Date(data.inicio) : new Date(data.fecha || Date.now());
           
           return {
             ...data,
-            fecha: inicio,
-            centro: data.centroAsignacion,
-            horasValidadas: Number(horasValidadas.toFixed(1)),
-            valorHora: valorHora,
-            totalDia: Math.round(horasValidadas * valorHora)
+            fecha: fechaObj,
+            centro: data.centroAsignacion || data.centroSalud || 'SAR Arpillerista',
+            horasValidadas: proy.horasTotales,
+            horasHabiles: proy.horasHabiles,
+            horasInhabiles: proy.horasInhabiles,
+            valorHoraHab: proy.valorHab,
+            valorHoraInh: proy.valorInh,
+            totalHabiles: proy.brutoHabiles,
+            totalInhabiles: proy.brutoInhabiles,
+            totalDia: proy.brutoTotal,
+            netoDia: proy.netoEstimado,
+            retencionDia: proy.retencionSII
           };
         });
 
@@ -81,8 +86,16 @@ const MisHonorariosView = ({ userData }) => {
   }, [userData, mesSeleccionado]);
 
   // Totales reales basados en la data filtrada
-  const totalHoras = asistencias.reduce((acc, curr) => acc + (curr.horasValidadas || 0), 0);
-  const totalMonto = asistencias.reduce((acc, curr) => acc + (curr.totalDia || 0), 0);
+  const horasLuVi = asistencias.reduce((acc, curr) => acc + (curr.horasHabiles || 0), 0);
+  const horasSaDoFest = asistencias.reduce((acc, curr) => acc + (curr.horasInhabiles || 0), 0);
+  const totalHoras = horasLuVi + horasSaDoFest;
+
+  const totalBrutoHabiles = asistencias.reduce((acc, curr) => acc + (curr.totalHabiles || 0), 0);
+  const totalBrutoInhabiles = asistencias.reduce((acc, curr) => acc + (curr.totalInhabiles || 0), 0);
+  const totalMonto = totalBrutoHabiles + totalBrutoInhabiles;
+
+  const retencionTotal = Math.round(totalMonto * 0.145);
+  const totalNeto = totalMonto - retencionTotal;
 
   const StepperItem = ({ step, label, status, isLast }) => (
     <div className="relative flex gap-4 pb-8">
@@ -104,19 +117,6 @@ const MisHonorariosView = ({ userData }) => {
       </div>
     </div>
   );
-
-  // Calculations for Print View
-  let horasLuVi = 0;
-  let horasSaDoFest = 0;
-  asistencias.forEach(a => {
-    if (a.fecha) {
-      const dayOfWeek = a.fecha.getDay();
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-      const hrs = Number(a.horasValidadas) || 0;
-      if (isWeekend) horasSaDoFest += hrs;
-      else horasLuVi += hrs;
-    }
-  });
 
   const tarifaBase = userData?.valorHora || 21000;
 
@@ -348,19 +348,35 @@ const MisHonorariosView = ({ userData }) => {
                 </tbody>
                 <tfoot className="bg-[#F8FAFC] border-t border-gray-100">
                   <tr>
-                    <td colSpan="3" className="px-8 py-6 text-secondary font-black uppercase tracking-widest text-xs">
-                      Consolidado Mensual
+                    <td colSpan="2" className="px-8 py-6 text-secondary font-black uppercase tracking-widest text-xs">
+                      Consolidado Mensual (Desglose Hábiles / Inhábiles)
                     </td>
                     <td className="px-8 py-6 text-center">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase leading-none mb-1">Total Horas</span>
+                      <div className="flex flex-col text-xs">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase">Hábiles</span>
+                        <span className="font-extrabold text-secondary">{horasLuVi} hrs</span>
+                        <span className="text-[10px] font-mono text-emerald-600 font-bold">${totalBrutoHabiles.toLocaleString('es-CL')}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6 text-center">
+                      <div className="flex flex-col text-xs">
+                        <span className="text-[10px] font-bold text-amber-500 uppercase">Inhábiles/Festivas</span>
+                        <span className="font-extrabold text-secondary">{horasSaDoFest} hrs</span>
+                        <span className="text-[10px] font-mono text-emerald-600 font-bold">${totalBrutoInhabiles.toLocaleString('es-CL')}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6 text-center">
+                      <div className="flex flex-col text-xs">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase">Total Horas</span>
                         <span className="text-lg font-black text-primary">{totalHoras} hrs</span>
                       </div>
                     </td>
-                    <td colSpan="2" className="px-8 py-6 text-right">
+                    <td className="px-8 py-6 text-right">
                       <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase leading-none mb-1">Subtotal Bruto</span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase leading-none mb-1">Monto Bruto Consolidado</span>
                         <span className="text-2xl font-black text-secondary">${totalMonto.toLocaleString('es-CL')}</span>
+                        <span className="text-xs font-mono text-rose-500 font-bold">SII (14.5%): -${retencionTotal.toLocaleString('es-CL')}</span>
+                        <span className="text-sm font-black text-emerald-700 font-mono mt-0.5">Neto Estimado: ${totalNeto.toLocaleString('es-CL')}</span>
                       </div>
                     </td>
                   </tr>
@@ -371,21 +387,21 @@ const MisHonorariosView = ({ userData }) => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white p-6 rounded-3xl border border-gray-100 flex items-center gap-4">
-              <div className="w-12 h-12 bg-success/10 rounded-2xl flex items-center justify-center text-success">
+              <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 border border-amber-200">
                 <DollarSign size={24} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Retención Honorarios</p>
-                <p className="font-bold text-secondary">13.75% Aplicada</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Retención Honorarios SII (14.5%)</p>
+                <p className="font-mono font-bold text-rose-600 text-lg">-${retencionTotal.toLocaleString('es-CL')}</p>
               </div>
             </div>
-            <div className="bg-white p-6 rounded-3xl border border-gray-100 flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
-                <ArrowRight size={24} />
-              </div>
+            <div className="bg-emerald-600 text-white p-6 rounded-3xl border border-emerald-500 flex items-center justify-between shadow-lg shadow-emerald-600/20">
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Próximo Pago</p>
-                <p className="font-bold text-secondary">05 de Junio 2026</p>
+                <p className="text-[10px] font-bold text-white/80 uppercase tracking-widest">Monto Neto Estimado a Recibir</p>
+                <p className="font-mono font-black text-2xl">${totalNeto.toLocaleString('es-CL')}</p>
+              </div>
+              <div className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                Líquido a Pago
               </div>
             </div>
           </div>

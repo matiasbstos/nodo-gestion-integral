@@ -1900,8 +1900,23 @@ const GestionFuncionariosView = ({ userData }) => {
           </div>
         );
       }
-      const data = tabData.honorarios;
-      const total = (data || []).reduce((s, h) => s + (Number(h.montoTotal) || 0), 0);
+      const rawTurnos = (tabData.turnos || []).concat(tabData.honorarios || []);
+      const processedHonorarios = rawTurnos.map(t => {
+        const proy = calcularProyeccionTurno(t, f);
+        return {
+          ...t,
+          proyeccion: proy,
+          montoTotalCalculado: proy.brutoTotal,
+          netoCalculado: proy.netoEstimado,
+          retencionSII: proy.retencionSII
+        };
+      });
+
+      const totalBruto = processedHonorarios.reduce((s, h) => s + h.montoTotalCalculado, 0);
+      const totalNeto = processedHonorarios.reduce((s, h) => s + h.netoCalculado, 0);
+      const totalHorasHabiles = processedHonorarios.reduce((s, h) => s + h.proyeccion.horasHabiles, 0);
+      const totalHorasInhabiles = processedHonorarios.reduce((s, h) => s + h.proyeccion.horasInhabiles, 0);
+
       return (
         <div className="space-y-6">
           <div className="bg-primary/5 border border-primary/10 rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1910,26 +1925,48 @@ const GestionFuncionariosView = ({ userData }) => {
               <p className="text-sm font-semibold text-secondary">
                 Estamento <strong className="text-primary">Cat {f.categoria || 'E'}</strong> • Nivel <strong className="text-primary">{f.grado || '15'}</strong>
               </p>
-              <p className="text-xs text-gray-400 mt-0.5">La tarifa varía según horas hábiles e inhábiles/festivas asociadas al turno.</p>
+              <p className="text-xs text-gray-400 mt-0.5">La tarifa varía según horas hábiles (${(ESCALA_HONORARIOS_SAR[f.categoria || 'E'] || ESCALA_HONORARIOS_SAR.E).valorHoraNormal.toLocaleString()}/h) e inhábiles/festivas (${(ESCALA_HONORARIOS_SAR[f.categoria || 'E'] || ESCALA_HONORARIOS_SAR.E).valorHoraFestivo.toLocaleString()}/h).</p>
             </div>
             <div className="bg-white px-6 py-4 rounded-2xl shadow-sm border border-gray-100 text-right">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Acumulado</p>
-              <p className="text-3xl font-black text-secondary">${total.toLocaleString('es-CL')}</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Acumulado Bruto / Neto</p>
+              <p className="text-3xl font-black text-secondary">${totalBruto.toLocaleString('es-CL')}</p>
+              <p className="text-xs font-mono font-bold text-emerald-700">Neto: ${totalNeto.toLocaleString('es-CL')}</p>
+            </div>
+          </div>
+
+          {/* Desglose Consolidado en Ficha de Funcionario */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-4 bg-tertiary rounded-2xl border border-gray-100">
+              <p className="text-[10px] font-bold text-gray-400 uppercase">Horas Hábiles</p>
+              <p className="text-xl font-black text-secondary">{totalHorasHabiles} hrs</p>
+            </div>
+            <div className="p-4 bg-tertiary rounded-2xl border border-gray-100">
+              <p className="text-[10px] font-bold text-gray-400 uppercase">Horas Inhábiles/Festivas</p>
+              <p className="text-xl font-black text-secondary">{totalHorasInhabiles} hrs</p>
+            </div>
+            <div className="p-4 bg-tertiary rounded-2xl border border-gray-100">
+              <p className="text-[10px] font-bold text-gray-400 uppercase">Retención SII (14.5%)</p>
+              <p className="text-xl font-mono font-bold text-rose-600">-${Math.round(totalBruto * 0.145).toLocaleString('es-CL')}</p>
             </div>
           </div>
 
           {tabLoading
             ? <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" size={28} /></div>
-            : !data || data.length === 0
+            : processedHonorarios.length === 0
               ? <EmptyTabState icon={Wallet} label="registros de honorarios" />
               : <div className="space-y-3">
-                  {data.map(h => (
+                  {processedHonorarios.map(h => (
                     <div key={h.id} className="bg-white border border-gray-100 rounded-2xl p-5 flex justify-between items-center shadow-sm">
                       <div>
-                        <p className="text-base font-bold text-secondary">{h.fecha || h.periodo}</p>
-                        <p className="text-xs text-gray-400 font-semibold">{h.horasTrabajadas || 0} horas prestadas ({h.tipoHora || 'hábiles/inhábiles'})</p>
+                        <p className="text-base font-bold text-secondary">{h.fecha || h.periodo || 'Turno Programado'}</p>
+                        <p className="text-xs text-gray-400 font-semibold">
+                          {h.proyeccion.horasTotales} horas ({h.proyeccion.horasHabiles}h Hábiles / {h.proyeccion.horasInhabiles}h Inhábiles)
+                        </p>
                       </div>
-                      <p className="text-2xl font-black text-primary">${Number(h.montoTotal || 0).toLocaleString('es-CL')}</p>
+                      <div className="text-right">
+                        <p className="text-xl font-black text-primary">${h.montoTotalCalculado.toLocaleString('es-CL')}</p>
+                        <p className="text-[11px] font-mono text-emerald-700 font-bold">Neto: ${h.netoCalculado.toLocaleString('es-CL')}</p>
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { calcularProyeccionTurno } from '../utils/escalaRemuneraciones';
 
 const AdminDashboardView = () => {
   const [loading, setLoading] = useState(true);
@@ -42,41 +43,54 @@ const AdminDashboardView = () => {
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         
-        // MÓDULO 3: Nueva Query Simplificada para Dashboard
-        const qTurnos = query(
-          collection(db, 'turnos'), 
-          where('fechaInicio', '>=', Timestamp.fromDate(startOfToday)),
-          orderBy('fechaInicio', 'asc')
-        );
-        
-        const snapTurnos = await getDocs(qTurnos);
-        const allFutureTurns = snapTurnos.docs.map(d => ({ 
-          id: d.id, 
-          ...d.data(),
-          // Convertir Timestamps a Date para facilitar el filtrado
-          inicioJS: d.data().fechaInicio?.toDate(),
-          terminoJS: d.data().fechaFin?.toDate()
-        }));
+        const snapTurnosAll = await getDocs(collection(db, 'turnos'));
+        const allTurns = snapTurnosAll.docs.map(d => {
+          const data = d.data();
+          const inicioJS = data.fechaInicio?.toDate 
+            ? data.fechaInicio.toDate() 
+            : data.inicio ? new Date(data.inicio) : new Date(data.fecha || Date.now());
+          return { id: d.id, ...data, inicioJS };
+        });
+
+        // Calculate Real KPIs
+        const totalGasto = allTurns.reduce((acc, t) => {
+          const proy = calcularProyeccionTurno(t);
+          return acc + proy.brutoTotal;
+        }, 0);
+
+        const totalAusencias = allTurns.filter(t => t.estado === 'ausente' || t.novedad || t.ausente).length;
+        const totalAlertas = allTurns.filter(t => t.atrasado || t.estado === 'atrasado').length;
+        const totalHorasExtras = allTurns.reduce((acc, t) => acc + (Number(t.horasExtras) || 0), 0);
+
+        const tasaAusentismoVal = allTurns.length > 0 ? ((totalAusencias / allTurns.length) * 100).toFixed(1) + '%' : '0%';
+
+        setKpis([
+          { label: 'Gasto Mensual Valorizado', value: `$${totalGasto.toLocaleString('es-CL')}`, change: 'Real', icon: DollarSign, color: 'text-primary', bgColor: 'bg-primary/10' },
+          { label: 'Tasa de Ausentismo', value: tasaAusentismoVal, change: `${totalAusencias} ausencias`, icon: UserX, color: 'text-warning', bgColor: 'bg-warning/10' },
+          { label: 'Alertas de Retrasos', value: `${totalAlertas}`, subtext: 'este mes', icon: AlertTriangle, color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
+          { label: 'Tiempo Adicional', value: `${totalHorasExtras} hrs`, change: 'Horas extra', icon: PlusCircle, color: 'text-success', bgColor: 'bg-success/10' }
+        ]);
 
         // Filtrado Frontend para HOY y PRÓXIMOS 7 DÍAS
         const endOfWeek = new Date(startOfToday);
         endOfWeek.setDate(startOfToday.getDate() + 7);
 
-        const filtered = allFutureTurns.filter(turn => {
+        const filtered = allTurns.filter(turn => {
           const isRelevantStatus = ['pendiente', 'programado', 'en_curso'].includes(turn.estado);
           const isWithinWeek = turn.inicioJS >= startOfToday && turn.inicioJS <= endOfWeek;
           return isRelevantStatus && isWithinWeek;
         });
 
-        setOperativos(filtered);
+        setOperativos(filtered.length > 0 ? filtered : allTurns.slice(0, 10));
 
         // Fetch Alerts
-        const qAlerts = query(collection(db, 'alertas'), orderBy('timestamp', 'desc'), limit(5));
-        const snapAlerts = await getDocs(qAlerts);
-        setAlerts(snapAlerts.docs.map(d => ({ id: d.id, ...d.data() })));
-
-        // KPI Fallbacks
-        setKpis(prev => prev.map(k => ({ ...k, value: k.label.includes('Gasto') ? '$0' : '0' })));
+        try {
+          const qAlerts = query(collection(db, 'alertas'), orderBy('timestamp', 'desc'), limit(5));
+          const snapAlerts = await getDocs(qAlerts);
+          setAlerts(snapAlerts.docs.map(d => ({ id: d.id, ...d.data() })));
+        } catch (e) {
+          console.warn("No alertas collection:", e.message);
+        }
 
       } catch (err) {
         console.warn("Dashboard Fetch Error:", err.message);
@@ -92,8 +106,8 @@ const AdminDashboardView = () => {
     <div className="p-8 max-w-[1600px] mx-auto space-y-8 animate-fade-in bg-[#F8FAFC]">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-[#1E293B] tracking-tight">Dashboard de Operaciones</h1>
-          <p className="text-gray-500 mt-1">Vista semanal de turnos y cumplimiento de red.</p>
+          <h1 className="text-3xl font-bold text-[#1E293B] tracking-tight">Resumen Consolidado Operativo</h1>
+          <p className="text-gray-500 mt-1">Vista semanal de turnos y cumplimiento de red de salud.</p>
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
