@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Clock, MapPin, ChevronLeft, ChevronRight, Info, X, Loader2, Calculator, TrendingUp, Receipt, CheckCircle2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, ChevronLeft, ChevronRight, Info, X, Loader2, Calculator, TrendingUp, Receipt, CheckCircle2, Stethoscope, Umbrella, ClipboardCheck, AlertTriangle, Lock } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { calcularProyeccionTurno } from '../utils/escalaRemuneraciones';
@@ -50,6 +50,136 @@ const FuncionarioTurnosView = ({ userData }) => {
 
     return () => unsubscribe();
   }, [userData]);
+
+  const [novedades, setNovedades] = useState([]);
+
+  useEffect(() => {
+    if (!userData?.rut) return;
+    const cleanRut = userData.rut.replace(/[^0-9kK]/g, '');
+
+    const qNov = query(
+      collection(db, 'novedades'),
+      where('rutFuncionario', '==', cleanRut)
+    );
+
+    const unsubNov = onSnapshot(qNov, (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setNovedades(list);
+    }, (err) => {
+      console.warn("Error fetching novedades:", err);
+    });
+
+    return () => unsubNov();
+  }, [userData]);
+
+  const getTurnoNovedadInfo = (turno) => {
+    const estado = (turno.estado || '').toLowerCase();
+    const tipoNovedadDirect = (turno.tipoNovedad || turno.tipoJustificacion || turno.motivoNovedad || '').toLowerCase();
+
+    if (estado === 'licencia' || tipoNovedadDirect.includes('licencia')) {
+      return {
+        tipo: 'licencia',
+        label: 'Justificado por Licencia Médica',
+        bgClass: 'bg-purple-50/90 border-purple-300 text-purple-900',
+        badgeClass: 'bg-purple-600 text-white',
+        iconType: 'stethoscope',
+        desc: 'Inasistencia justificada mediante Licencia Médica registrada por la Administración.'
+      };
+    }
+
+    if (estado === 'vacaciones' || tipoNovedadDirect.includes('vacaciones')) {
+      return {
+        tipo: 'vacaciones',
+        label: 'Justificado por Vacaciones',
+        bgClass: 'bg-cyan-50/90 border-cyan-300 text-cyan-900',
+        badgeClass: 'bg-cyan-600 text-white',
+        iconType: 'umbrella',
+        desc: 'Turno liberado por período de Vacaciones anuales.'
+      };
+    }
+
+    if (estado === 'permiso' || tipoNovedadDirect.includes('permiso')) {
+      return {
+        tipo: 'permiso',
+        label: 'Justificado por Permiso Administrativo',
+        bgClass: 'bg-amber-50/90 border-amber-300 text-amber-900',
+        badgeClass: 'bg-amber-600 text-white',
+        iconType: 'clipboard',
+        desc: 'Turno eximido con Permiso Administrativo autorizado.'
+      };
+    }
+
+    if (estado === 'ausente' || tipoNovedadDirect.includes('ausente')) {
+      return {
+        tipo: 'ausente',
+        label: 'Inasistencia Registrada',
+        bgClass: 'bg-rose-50/90 border-rose-300 text-rose-900',
+        badgeClass: 'bg-rose-600 text-white',
+        iconType: 'alert',
+        desc: 'Inasistencia reportada en la bitácora del centro.'
+      };
+    }
+
+    if (novedades && novedades.length > 0 && turno.inicio) {
+      const shiftDate = new Date(turno.inicio);
+      shiftDate.setHours(0,0,0,0);
+
+      const foundNov = novedades.find(n => {
+        const start = n.fechaInicio ? new Date(n.fechaInicio) : null;
+        const end = n.fechaFin ? new Date(n.fechaFin) : start;
+        if (start) start.setHours(0,0,0,0);
+        if (end) end.setHours(23,59,59,999);
+
+        return start && end && shiftDate >= start && shiftDate <= end;
+      });
+
+      if (foundNov) {
+        const tipo = (foundNov.tipo || foundNov.tipoNovedad || '').toLowerCase();
+        if (tipo.includes('licencia')) {
+          return {
+            tipo: 'licencia',
+            label: 'Justificado por Licencia Médica',
+            bgClass: 'bg-purple-50/90 border-purple-300 text-purple-900',
+            badgeClass: 'bg-purple-600 text-white',
+            iconType: 'stethoscope',
+            desc: foundNov.observaciones || 'Licencia médica registrada en tu expediente por la Administración.'
+          };
+        }
+        if (tipo.includes('vacaciones')) {
+          return {
+            tipo: 'vacaciones',
+            label: 'Justificado por Vacaciones',
+            bgClass: 'bg-cyan-50/90 border-cyan-300 text-cyan-900',
+            badgeClass: 'bg-cyan-600 text-white',
+            iconType: 'umbrella',
+            desc: foundNov.observaciones || 'Vacaciones autorizadas por la Administración.'
+          };
+        }
+        if (tipo.includes('permiso')) {
+          return {
+            tipo: 'permiso',
+            label: 'Justificado por Permiso Administrativo',
+            bgClass: 'bg-amber-50/90 border-amber-300 text-amber-900',
+            badgeClass: 'bg-amber-600 text-white',
+            iconType: 'clipboard',
+            desc: foundNov.observaciones || 'Permiso administrativo autorizado.'
+          };
+        }
+        if (tipo.includes('ausente') || tipo.includes('inasistencia')) {
+          return {
+            tipo: 'ausente',
+            label: 'Inasistencia Registrada',
+            bgClass: 'bg-rose-50/90 border-rose-300 text-rose-900',
+            badgeClass: 'bg-rose-600 text-white',
+            iconType: 'alert',
+            desc: foundNov.observaciones || 'Inasistencia reportada.'
+          };
+        }
+      }
+    }
+
+    return null;
+  };
 
   const MOTIVOS_CANCELACION = [
     'Salud / Licencia médica',
@@ -165,10 +295,15 @@ const FuncionarioTurnosView = ({ userData }) => {
             <div className="p-12 text-center text-gray-400">Cargando tu agenda...</div>
           ) : turnos.length > 0 ? (
             turnos.map((turno) => {
+              const novedadInfo = getTurnoNovedadInfo(turno);
+              const esPlazoFijo = (userData?.tipoContrato || '').toLowerCase().includes('plazo') || (userData?.tipoContrato || '').toLowerCase().includes('planta');
+              const esTurnoOrdinarioAuto = ['Turno 1', 'Turno 2', 'Turno 3', 'Turno A', 'Turno B', 'Turno C'].includes(turno.tipoTurno || turno.turno);
+              const esTurnoInstitucionalObligatorio = esPlazoFijo || (esTurnoOrdinarioAuto && !turno.esExtra && !turno.esRefuerzo);
+
               const esFuturo = new Date(turno.inicio) > new Date();
               const estaCancelado = turno.estado === 'cancelado_por_usuario';
-              const estaAceptado = turno.aceptado === true || turno.estado === 'programado';
-              const estaPendiente = !estaAceptado && !estaCancelado;
+              const estaAceptado = turno.aceptado === true || turno.estado === 'programado' || esTurnoInstitucionalObligatorio;
+              const estaPendiente = !estaAceptado && !estaCancelado && !novedadInfo;
 
               const tipoTurnoName = turno.tipoTurno || turno.turno || turno.tipo;
               let shiftBadge = { label: 'Turno 1 (Verde)', cls: 'bg-emerald-100 text-emerald-800 border border-emerald-300' };
@@ -181,17 +316,33 @@ const FuncionarioTurnosView = ({ userData }) => {
               }
 
               return (
-                <div key={turno.id} className={`p-6 flex items-center justify-between hover:bg-gray-50/50 transition-colors ${estaPendiente ? 'bg-amber-50/30' : ''}`}>
+                <div 
+                  key={turno.id} 
+                  className={`p-6 flex flex-col md:flex-row md:items-center justify-between transition-colors gap-4 rounded-2xl border my-2 ${
+                    novedadInfo
+                      ? `${novedadInfo.bgClass} shadow-sm`
+                      : estaPendiente
+                      ? 'bg-amber-50/30 border-amber-200'
+                      : 'bg-white border-gray-100 hover:bg-gray-50/50'
+                  }`}
+                >
                   <div className="flex items-center gap-6">
-                    <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center border shadow-sm ${estaPendiente ? 'bg-amber-500 border-amber-400 text-white' : 'bg-tertiary border-gray-100 text-secondary'}`}>
-                      <span className={`text-[10px] font-bold uppercase leading-none ${estaPendiente ? 'text-white/80' : 'text-gray-400'}`}>
+                    <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center border shadow-sm shrink-0 ${
+                      novedadInfo
+                        ? 'bg-white border-gray-200 text-secondary'
+                        : estaPendiente 
+                        ? 'bg-amber-500 border-amber-400 text-white' 
+                        : 'bg-tertiary border-gray-100 text-secondary'
+                    }`}>
+                      <span className={`text-[10px] font-bold uppercase leading-none ${estaPendiente && !novedadInfo ? 'text-white/80' : 'text-gray-400'}`}>
                         {new Date(turno.inicio).toLocaleDateString('es-CL', { month: 'short' }).toUpperCase()}
                       </span>
                       <span className="text-2xl font-black leading-none mt-1">
                         {new Date(turno.inicio).getDate()}
                       </span>
                     </div>
-                    <div>
+
+                    <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-bold text-secondary text-lg">
                           {turno.nombreHorario || (
@@ -202,27 +353,46 @@ const FuncionarioTurnosView = ({ userData }) => {
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${shiftBadge.cls}`}>
                           {shiftBadge.label}
                         </span>
-                        {estaPendiente && (
+
+                        {novedadInfo && (
+                          <span className={`px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${novedadInfo.badgeClass}`}>
+                            {novedadInfo.label}
+                          </span>
+                        )}
+
+                        {!novedadInfo && estaPendiente && (
                           <span className="px-2 py-0.5 bg-amber-500 text-white text-[8px] font-black uppercase rounded-md animate-pulse">
                             Pendiente Aceptación
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 text-sm text-gray-500 mt-1 flex-wrap">
-                        <span className="flex items-center gap-1"><MapPin size={14} /> {turno.centroSalud}</span>
+
+                      <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+                        <span className="flex items-center gap-1 font-semibold"><MapPin size={14} /> {turno.centroSalud}</span>
                         <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                        <span className="flex items-center gap-1"><Clock size={14} /> {new Date(turno.inicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(turno.termino).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="flex items-center gap-1 font-semibold"><Clock size={14} /> {new Date(turno.inicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(turno.termino).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         {turno.rolTurno && (
                           <>
                             <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                            <span className="font-bold text-secondary text-xs bg-gray-100 px-2 py-0.5 rounded">{turno.rolTurno}</span>
+                            <span className="font-bold text-secondary text-xs bg-white/80 px-2 py-0.5 rounded border border-gray-200">{turno.rolTurno}</span>
                           </>
                         )}
                       </div>
+
+                      {novedadInfo && (
+                        <p className="text-xs font-semibold mt-1 opacity-90">
+                          {novedadInfo.desc}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    {estaPendiente ? (
+
+                  <div className="flex items-center gap-3 self-end md:self-auto">
+                    {novedadInfo ? (
+                      <span className="px-3.5 py-1.5 bg-white/90 text-secondary border border-gray-200 text-[10px] font-extrabold uppercase tracking-widest rounded-xl shadow-sm">
+                        Justificado por Administración
+                      </span>
+                    ) : estaPendiente ? (
                       <div className="flex gap-2">
                         <button 
                           onClick={() => setShowCancelModal(turno.id)}
@@ -248,6 +418,15 @@ const FuncionarioTurnosView = ({ userData }) => {
                             Motivo: {turno.motivoCancelacion}
                           </p>
                         )}
+                      </div>
+                    ) : esTurnoInstitucionalObligatorio ? (
+                      <div className="flex items-center gap-2">
+                        <span className="px-3.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold uppercase tracking-widest rounded-full flex items-center gap-1">
+                          <CheckCircle2 size={12} /> Carga Automática
+                        </span>
+                        <span className="px-3 py-1.5 bg-gray-100 text-gray-500 rounded-xl text-[10px] font-extrabold uppercase border border-gray-200 flex items-center gap-1">
+                          <Lock size={12} /> Turno Institucional
+                        </span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-3">
