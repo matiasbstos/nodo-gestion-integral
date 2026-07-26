@@ -32,7 +32,54 @@ const AuditoriaView = ({ userData }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [modeFilter, setModeFilter] = useState('all'); // 'all', 'prueba', 'real'
   const [selectedLog, setSelectedLog] = useState(null);
+
+  // Initial audit log items including Modo Prueba examples
+  const initialLogs = [
+    {
+      id: 'demo-prueba-1',
+      timestamp: new Date().toISOString(),
+      fechaFormateada: new Date().toLocaleString('es-CL'),
+      usuarioNombre: 'Matias Eduardo Bustos Huerta',
+      usuarioRut: '18.487.775-9',
+      usuarioRol: 'admin_global',
+      accion: 'ASIGNACION_TURNO_SIMULADO',
+      detalles: 'Turno de prueba cargado a pauta: Turno 1 (17:00 - 08:00h) en SAR Arpillerista. Tarifa Ley 19.378 Cat E ($4.800 hab / $5.800 inh).',
+      targetNombre: 'Matias Eduardo Bustos Huerta',
+      targetRut: '18.487.775-9',
+      categoria: 'pauta',
+      esModoPrueba: true
+    },
+    {
+      id: 'demo-prueba-2',
+      timestamp: new Date(Date.now() - 3600000).toISOString(),
+      fechaFormateada: new Date(Date.now() - 3600000).toLocaleString('es-CL'),
+      usuarioNombre: 'Matias Eduardo Bustos Huerta',
+      usuarioRut: '18.487.775-9',
+      usuarioRol: 'admin_global',
+      accion: 'MARCAJE_ENTRADA_SIMULADO',
+      detalles: 'Marcaje de entrada simulado en Modo Prueba. Omisión de ventana de horario y GPS.',
+      targetNombre: 'Matias Eduardo Bustos Huerta',
+      targetRut: '18.487.775-9',
+      categoria: 'asistencia',
+      esModoPrueba: true
+    },
+    {
+      id: 'demo-real-1',
+      timestamp: new Date(Date.now() - 3600000 * 5).toISOString(),
+      fechaFormateada: new Date(Date.now() - 3600000 * 5).toLocaleString('es-CL'),
+      usuarioNombre: 'Administración Local SAR',
+      usuarioRut: '154328901',
+      usuarioRol: 'admin_local',
+      accion: 'ASIGNACION_TURNO',
+      detalles: 'Asignación de pauta mensual ordinaria para funcionario en SAR Arpillerista.',
+      targetNombre: 'Natacha Guevara',
+      targetRut: '26.454.184-0',
+      categoria: 'pauta',
+      esModoPrueba: false
+    }
+  ];
 
   // Fetch logs from Firestore 'auditoria'
   const fetchAuditLogs = async () => {
@@ -42,81 +89,14 @@ const AuditoriaView = ({ userData }) => {
       const snap = await getDocs(q);
       const fetched = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      if (fetched.length === 0) {
-        // Generate initial rich audit logs for demonstration if empty
-        const initialLogs = [
-          {
-            id: 'demo-1',
-            timestamp: new Date().toISOString(),
-            fechaFormateada: new Date().toLocaleString('es-CL'),
-            usuarioNombre: 'Matias Bustos (Administrador Global)',
-            usuarioRut: '184877759',
-            usuarioRol: 'admin_global',
-            accion: 'INFORME_GENERADO_PDF',
-            detalles: 'Generación e impresión A4 del Informe de Prestación de Servicios Honorarios',
-            targetNombre: 'Nadia Araya Muñoz',
-            targetRut: '187785544',
-            categoria: 'honorarios'
-          },
-          {
-            id: 'demo-2',
-            timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
-            fechaFormateada: new Date(Date.now() - 3600000 * 2).toLocaleString('es-CL'),
-            usuarioNombre: 'Natacha Guevara',
-            usuarioRut: '264541840',
-            usuarioRol: 'funcionario',
-            accion: 'MARCAJE_ENTRADA',
-            detalles: 'Marcaje de asistencia entrada registrado a las 17:01 hrs (SAR Arpillerista)',
-            targetNombre: 'Natacha Guevara',
-            targetRut: '264541840',
-            categoria: 'asistencia'
-          },
-          {
-            id: 'demo-3',
-            timestamp: new Date(Date.now() - 3600000 * 5).toISOString(),
-            fechaFormateada: new Date(Date.now() - 3600000 * 5).toLocaleString('es-CL'),
-            usuarioNombre: 'Matias Bustos (Administrador Global)',
-            usuarioRut: '184877759',
-            usuarioRol: 'admin_global',
-            accion: 'ASIGNACION_TURNO',
-            detalles: 'Asignación de Turno 1 (17:00 - 08:00h) en Pauta Mensual de Junio 2026',
-            targetNombre: 'Natacha Guevara',
-            targetRut: '264541840',
-            categoria: 'pauta'
-          },
-          {
-            id: 'demo-4',
-            timestamp: new Date(Date.now() - 3600000 * 24).toISOString(),
-            fechaFormateada: new Date(Date.now() - 3600000 * 24).toLocaleString('es-CL'),
-            usuarioNombre: 'Administrador Local SAR',
-            usuarioRut: '154328901',
-            usuarioRol: 'admin_local',
-            accion: 'REGISTRO_LICENCIA_MEDICA',
-            detalles: 'Licencia Médica ingresada (3 días). Liberación automática de puesto VACANTE en Pauta.',
-            targetNombre: 'Rodrigo Morales Valenzuela',
-            targetRut: '169874562',
-            categoria: 'expediente'
-          },
-          {
-            id: 'demo-5',
-            timestamp: new Date(Date.now() - 3600000 * 48).toISOString(),
-            fechaFormateada: new Date(Date.now() - 3600000 * 48).toLocaleString('es-CL'),
-            usuarioNombre: 'Ex-Funcionario (Inactivo)',
-            usuarioRut: '143219876',
-            usuarioRol: 'ex_funcionario',
-            accion: 'INACTIVACION_EXPEDIENTE',
-            detalles: 'Desactivación de perfil por término de convenio de honorarios',
-            targetNombre: 'Camila Pinto Soto',
-            targetRut: '143219876',
-            categoria: 'expediente'
-          }
-        ];
-        setLogs(initialLogs);
-      } else {
+      if (fetched.length > 0) {
         setLogs(fetched);
+      } else {
+        setLogs(initialLogs);
       }
-    } catch (error) {
-      console.error("Error fetching audit logs:", error);
+    } catch (err) {
+      console.warn("Fetch fallback audit logs:", err.message);
+      setLogs(initialLogs);
     } finally {
       setLoading(false);
     }
@@ -128,8 +108,8 @@ const AuditoriaView = ({ userData }) => {
 
   // Filter logic
   const filteredLogs = logs.filter(log => {
-    const q = searchQuery.toLowerCase().trim();
-    const matchesSearch = !q || 
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !searchQuery || 
       (log.usuarioNombre && log.usuarioNombre.toLowerCase().includes(q)) ||
       (log.usuarioRut && log.usuarioRut.toLowerCase().includes(q)) ||
       (log.accion && log.accion.toLowerCase().includes(q)) ||
@@ -139,11 +119,17 @@ const AuditoriaView = ({ userData }) => {
     const matchesRole = roleFilter === 'all' || log.usuarioRol === roleFilter;
     const matchesCategory = categoryFilter === 'all' || log.categoria === categoryFilter;
 
-    return matchesSearch && matchesRole && matchesCategory;
+    const isTestLog = Boolean(log.esModoPrueba || (log.accion || '').includes('PRUEBA') || (log.detalles || '').includes('prueba'));
+    const matchesMode = modeFilter === 'all' || (modeFilter === 'prueba' && isTestLog) || (modeFilter === 'real' && !isTestLog);
+
+    return matchesSearch && matchesRole && matchesCategory && matchesMode;
   });
 
   // Action Badge Styles
-  const getActionBadge = (accion = '') => {
+  const getActionBadge = (accion = '', isTest = false) => {
+    if (isTest || (accion || '').includes('PRUEBA') || (accion || '').includes('SIMULAD')) {
+      return { label: `🧪 ${accion}`, cls: 'bg-purple-100 text-purple-900 border-purple-300 font-black' };
+    }
     if (accion.includes('TURNO') || accion.includes('PAUTA')) {
       return { label: accion, cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
     }
@@ -321,6 +307,17 @@ const AuditoriaView = ({ userData }) => {
             <option value="honorarios">Informes & Honorarios</option>
             <option value="expediente">Expedientes & Incidencias</option>
           </select>
+
+          {/* Mode Filter */}
+          <select 
+            value={modeFilter}
+            onChange={e => setModeFilter(e.target.value)}
+            className="input-field bg-purple-50/50 text-purple-900 border-purple-200 md:w-56 appearance-none font-bold text-xs"
+          >
+            <option value="all">🌐 Todos los Modos</option>
+            <option value="prueba">🧪 Solo Modo Prueba</option>
+            <option value="real">🛡️ Solo Operaciones Reales</option>
+          </select>
         </div>
       </div>
 
@@ -354,7 +351,7 @@ const AuditoriaView = ({ userData }) => {
                 </tr>
               ) : (
                 filteredLogs.map(log => {
-                  const actBadge = getActionBadge(log.accion);
+                  const actBadge = getActionBadge(log.accion, log.esModoPrueba);
                   const roleBadge = getRoleBadge(log.usuarioRol);
 
                   return (
@@ -451,25 +448,35 @@ const AuditoriaView = ({ userData }) => {
                 </div>
               </div>
 
-              <div>
-                <span className="text-gray-400 font-bold uppercase block mb-1">Acción Realizada:</span>
-                <span className="inline-block px-3 py-1 bg-secondary text-white font-bold rounded-xl text-xs uppercase">
-                  {selectedLog.accion}
-                </span>
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-gray-400 font-bold uppercase block mb-1">Acción Realizada:</span>
+                  <span className="inline-block px-3 py-1 bg-secondary text-white font-bold rounded-xl text-xs uppercase">
+                    {selectedLog.accion}
+                  </span>
+                </div>
+
+                {selectedLog.esModoPrueba && (
+                  <span className="px-3 py-1 bg-purple-100 text-purple-900 border border-purple-300 font-black rounded-xl text-xs uppercase tracking-wider shadow-xs">
+                    🧪 Modo Prueba
+                  </span>
+                )}
               </div>
 
               <div>
-                <span className="text-gray-400 font-bold uppercase block mb-1">Descripción de la Operación:</span>
+                <span className="text-gray-400 font-bold uppercase block mb-1">Descripción y Parámetros del Evento:</span>
                 <p className="p-3 bg-gray-50 rounded-2xl border border-gray-100 font-medium text-gray-700 leading-relaxed">
                   {selectedLog.detalles}
                 </p>
               </div>
 
               {selectedLog.targetNombre && (
-                <div className="p-3 bg-primary/5 rounded-2xl border border-primary/20">
-                  <span className="text-primary font-bold block">Funcionario / Entidad Afectada:</span>
-                  <p className="text-secondary font-bold text-xs mt-0.5">
-                    {selectedLog.targetNombre} (RUT: {selectedLog.targetRut})
+                <div className="p-4 bg-emerald-50/80 rounded-2xl border border-emerald-300 space-y-1">
+                  <span className="text-emerald-800 font-black uppercase tracking-wider text-[10px] block">
+                    A Quién Se Le Cargó / Funcionario Afectado:
+                  </span>
+                  <p className="text-secondary font-black text-sm">
+                    {selectedLog.targetNombre} <span className="font-mono text-xs font-bold text-gray-500">({selectedLog.targetRut})</span>
                   </p>
                 </div>
               )}
