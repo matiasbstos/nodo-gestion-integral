@@ -734,17 +734,31 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
                 <div className="p-6 space-y-4">
                   {turnosHoy.length > 0 ? (
                     turnosHoy.map(turno => (
-                      <div key={turno.id} className="space-y-4">
-                        <div className="flex justify-between items-center text-sm p-3 bg-tertiary rounded-xl border border-gray-100">
-                          <span className="text-gray-400">Turno Hoy</span>
-                          <span className="font-bold text-secondary">
-                            {turno.fechaInicio?.toDate?.()?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '--:--'} - 
-                            {turno.fechaFin?.toDate?.()?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '--:--'}
+                      <div 
+                        key={turno.id}
+                        onClick={() => handleOpenAcceptModal(turno)}
+                        className="p-4 bg-tertiary hover:bg-white rounded-2xl border border-gray-100 hover:border-primary/40 shadow-sm transition-all cursor-pointer group space-y-3"
+                      >
+                        <div className="flex justify-between items-center text-sm">
+                          <div className="flex items-center gap-2">
+                            <Clock size={16} className="text-primary" />
+                            <span className="font-extrabold text-secondary">
+                              Turno Hoy ({turno.fechaInicio?.toDate?.()?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '--:--'} - {turno.fechaFin?.toDate?.()?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '--:--'})
+                            </span>
+                          </div>
+                          <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full uppercase ${turno.aceptado ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse'}`}>
+                            {turno.aceptado ? '✓ Aceptado & Listo' : '⚡ Pendiente de Aceptación'}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center text-sm p-3 bg-tertiary rounded-xl border border-gray-100">
-                          <span className="text-gray-400">Centro</span>
-                          <span className="font-bold text-secondary">{turno.centroAsignacion || 'Centro no especificado'}</span>
+                        
+                        <div className="flex justify-between items-center text-xs text-gray-500 pt-2 border-t border-gray-100/60">
+                          <span className="flex items-center gap-1 font-medium">
+                            <MapPin size={14} className="text-gray-400" />
+                            {turno.centroAsignacion || turno.centroSalud || 'SAR Arpillerista Elsa Romo Aravena'}
+                          </span>
+                          <button className="text-[11px] font-bold text-primary group-hover:underline flex items-center gap-1">
+                            {turno.aceptado ? 'Ver Proyección Financiera' : 'Revisar & Aceptar Turno →'}
+                          </button>
                         </div>
                       </div>
                     ))

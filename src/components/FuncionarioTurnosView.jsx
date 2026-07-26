@@ -3,6 +3,7 @@ import { Calendar as CalendarIcon, Clock, MapPin, ChevronLeft, ChevronRight, Inf
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { calcularProyeccionTurno } from '../utils/escalaRemuneraciones';
+import { logAuditAction } from '../utils/auditLogger';
 
 const FuncionarioTurnosView = ({ userData }) => {
   const [turnos, setTurnos] = useState([]);
@@ -50,27 +51,57 @@ const FuncionarioTurnosView = ({ userData }) => {
     return () => unsubscribe();
   }, [userData]);
 
+  const MOTIVOS_CANCELACION = [
+    'Salud / Licencia médica',
+    'Permiso administrativo / Motivos personales',
+    'Topación / Traslape con otro turno',
+    'Problemas de movilización / Transporte',
+    'Emergencia familiar',
+    'Otro motivo (especificar)'
+  ];
+
   const [showCancelModal, setShowCancelModal] = useState(null); // ID del turno a cancelar
+  const [cancelCategory, setCancelCategory] = useState(MOTIVOS_CANCELACION[0]);
   const [cancelReason, setCancelReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const handleCancelTurno = async () => {
-    if (!cancelReason) return alert('Debes ingresar una justificación');
+    if (!showCancelModal) return;
+    const finalReason = cancelReason.trim() ? `${cancelCategory}: ${cancelReason.trim()}` : cancelCategory;
+    
     setSubmitting(true);
     try {
       const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
       await updateDoc(doc(db, 'turnos', showCancelModal), {
         estado: 'cancelado_por_usuario',
-        motivoCancelacion: cancelReason,
-        fechaCancelacion: serverTimestamp()
+        aceptado: false,
+        motivoCategoria: cancelCategory,
+        motivoCancelacion: finalReason,
+        fechaCancelacion: serverTimestamp(),
+        canceladoPor: userData?.nombre || 'Funcionario'
       });
-      setTurnos(prev => prev.map(t => t.id === showCancelModal ? { ...t, estado: 'cancelado_por_usuario' } : t));
+
+      // Auditoría en tiempo real para el Administrador
+      logAuditAction(
+        'RECHAZO_TURNO',
+        `El funcionario ${userData?.nombre || ''} (RUT ${userData?.rut || ''}) canceló/rechazó el turno ID ${showCancelModal}. Motivo: ${finalReason}`,
+        userData
+      );
+
+      setTurnos(prev => prev.map(t => t.id === showCancelModal ? { 
+        ...t, 
+        estado: 'cancelado_por_usuario',
+        aceptado: false,
+        motivoCategoria: cancelCategory, 
+        motivoCancelacion: finalReason 
+      } : t));
+
       setShowCancelModal(null);
       setCancelReason('');
-      alert('Turno rechazado/cancelado correctamente.');
+      alert('Turno cancelado/rechazado. El motivo ha sido registrado correctamente en la Auditoría.');
     } catch (err) {
       console.error(err);
-      alert('Error al procesar la solicitud: ' + err.message);
+      alert('Error al procesar la cancelación: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -136,7 +167,8 @@ const FuncionarioTurnosView = ({ userData }) => {
             turnos.map((turno) => {
               const esFuturo = new Date(turno.inicio) > new Date();
               const estaCancelado = turno.estado === 'cancelado_por_usuario';
-              const estaPendiente = turno.estado === 'pendiente';
+              const estaAceptado = turno.aceptado === true || turno.estado === 'programado';
+              const estaPendiente = !estaAceptado && !estaCancelado;
 
               const tipoTurnoName = turno.tipoTurno || turno.turno || turno.tipo;
               let shiftBadge = { label: 'Turno 1 (Verde)', cls: 'bg-emerald-100 text-emerald-800 border border-emerald-300' };
@@ -149,10 +181,10 @@ const FuncionarioTurnosView = ({ userData }) => {
               }
 
               return (
-                <div key={turno.id} className={`p-6 flex items-center justify-between hover:bg-gray-50/50 transition-colors ${estaPendiente ? 'bg-primary/5' : ''}`}>
+                <div key={turno.id} className={`p-6 flex items-center justify-between hover:bg-gray-50/50 transition-colors ${estaPendiente ? 'bg-amber-50/30' : ''}`}>
                   <div className="flex items-center gap-6">
-                    <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center border shadow-sm ${estaPendiente ? 'bg-primary border-primary text-white' : 'bg-tertiary border-gray-100 text-secondary'}`}>
-                      <span className={`text-[10px] font-bold uppercase leading-none ${estaPendiente ? 'text-white/70' : 'text-gray-400'}`}>
+                    <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center border shadow-sm ${estaPendiente ? 'bg-amber-500 border-amber-400 text-white' : 'bg-tertiary border-gray-100 text-secondary'}`}>
+                      <span className={`text-[10px] font-bold uppercase leading-none ${estaPendiente ? 'text-white/80' : 'text-gray-400'}`}>
                         {new Date(turno.inicio).toLocaleDateString('es-CL', { month: 'short' }).toUpperCase()}
                       </span>
                       <span className="text-2xl font-black leading-none mt-1">
@@ -171,8 +203,8 @@ const FuncionarioTurnosView = ({ userData }) => {
                           {shiftBadge.label}
                         </span>
                         {estaPendiente && (
-                          <span className="px-2 py-0.5 bg-primary text-white text-[8px] font-black uppercase rounded-md animate-pulse">
-                            Nuevo
+                          <span className="px-2 py-0.5 bg-amber-500 text-white text-[8px] font-black uppercase rounded-md animate-pulse">
+                            Pendiente Aceptación
                           </span>
                         )}
                       </div>
@@ -207,35 +239,41 @@ const FuncionarioTurnosView = ({ userData }) => {
                         </button>
                       </div>
                     ) : estaCancelado ? (
-                      <span className="px-4 py-2 bg-error/10 text-error text-[10px] font-bold uppercase tracking-widest rounded-full border border-error/20">
-                        Cancelado
-                      </span>
-                    ) : (
-                      <>
-                        <span className="px-4 py-2 bg-success/10 text-success text-[10px] font-bold uppercase tracking-widest rounded-full border border-success/20">
-                          {turno.estado === 'programado' ? 'Confirmado' : turno.estado.toUpperCase()}
+                      <div className="text-right">
+                        <span className="px-4 py-2 bg-error/10 text-error text-[10px] font-bold uppercase tracking-widest rounded-full border border-error/20 inline-block">
+                          Cancelado
                         </span>
-                        {esFuturo && (
-                          <button 
-                            onClick={() => setShowCancelModal(turno.id)}
-                            className="text-xs font-bold text-error hover:underline uppercase tracking-wider"
-                          >
-                            Cancelar
-                          </button>
+                        {turno.motivoCancelacion && (
+                          <p className="text-[10px] text-gray-400 font-medium mt-1 max-w-[200px] truncate" title={turno.motivoCancelacion}>
+                            Motivo: {turno.motivoCancelacion}
+                          </p>
                         )}
-                      </>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <span className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold uppercase tracking-widest rounded-full flex items-center gap-1">
+                          <CheckCircle2 size={12} /> Confirmado
+                        </span>
+                        <button 
+                          onClick={() => setSelectedShiftToAccept(turno)}
+                          className="text-xs font-bold text-primary hover:underline uppercase tracking-wider"
+                        >
+                          Ver Proyección
+                        </button>
+                        <button 
+                          onClick={() => setShowCancelModal(turno.id)}
+                          className="text-xs font-bold text-rose-500 hover:underline uppercase tracking-wider"
+                        >
+                          Rechazar / Cancelar
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
               );
             })
           ) : (
-            <div className="p-20 text-center space-y-4">
-              <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-300">
-                <CalendarIcon size={40} />
-              </div>
-              <p className="text-gray-400 font-medium">No tienes turnos asignados para este periodo.</p>
-            </div>
+            <div className="p-12 text-center text-gray-400">No tienes turnos programados.</div>
           )}
         </div>
       </div>
@@ -247,35 +285,59 @@ const FuncionarioTurnosView = ({ userData }) => {
             <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-error/5 text-error">
               <h3 className="text-xl font-bold flex items-center gap-2">
                 <Info size={20} />
-                Justificar Cancelación
+                Motivo de Rechazo / Cancelación
               </h3>
               <button onClick={() => setShowCancelModal(null)} className="text-gray-400 hover:text-secondary">
                 <X size={24} />
               </button>
             </div>
-            <div className="p-8 space-y-6">
+            <div className="p-6 md:p-8 space-y-5">
               <div className="space-y-4">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Motivo de la cancelación (Obligatorio)</label>
-                <textarea 
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  placeholder="Ej: Problemas de salud, Permiso administrativo, etc."
-                  className="w-full bg-tertiary border-none rounded-2xl p-4 text-sm font-medium text-secondary focus:ring-2 focus:ring-error/20 min-h-[120px] resize-none"
-                />
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-1">
+                    Categoría del Motivo
+                  </label>
+                  <select
+                    value={cancelCategory}
+                    onChange={e => setCancelCategory(e.target.value)}
+                    className="w-full input-field bg-gray-50 text-xs font-bold text-secondary border border-gray-200 cursor-pointer"
+                  >
+                    {MOTIVOS_CANCELACION.map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-1">
+                    Detalle / Observación (Opcional)
+                  </label>
+                  <textarea 
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    placeholder="Describe brevemente el motivo o detalle relevante..."
+                    className="w-full bg-tertiary border border-gray-200 rounded-2xl p-3.5 text-xs font-medium text-secondary focus:ring-2 focus:ring-error/20 min-h-[90px] resize-none"
+                  />
+                </div>
+
+                <p className="text-[10px] text-gray-400 italic">
+                  * Este motivo quedará registrado en la Bitácora de Auditoría para revisión del Administrador Local y Global.
+                </p>
               </div>
-              <div className="flex gap-3">
+
+              <div className="flex gap-3 pt-2">
                 <button 
                   onClick={() => setShowCancelModal(null)}
-                  className="flex-1 py-4 bg-gray-100 text-gray-500 rounded-2xl font-bold uppercase tracking-widest hover:bg-gray-200 transition-all"
+                  className="flex-1 py-3.5 bg-gray-100 text-gray-500 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
                 >
                   Volver
                 </button>
                 <button 
                   onClick={handleCancelTurno}
                   disabled={submitting}
-                  className="flex-1 py-4 bg-error text-white rounded-2xl font-bold uppercase tracking-widest hover:bg-error-dark transition-all flex items-center justify-center"
+                  className="flex-1 py-3.5 bg-error text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-error-dark transition-all flex items-center justify-center"
                 >
-                  {submitting ? <Loader2 className="animate-spin" /> : 'Confirmar'}
+                  {submitting ? <Loader2 className="animate-spin" /> : 'Confirmar Cancelación'}
                 </button>
               </div>
             </div>
