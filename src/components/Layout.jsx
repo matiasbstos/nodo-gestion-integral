@@ -42,6 +42,7 @@ const Layout = ({ children, activeView, setActiveView, onLogout, userData, pasoT
           currentViewTitle={viewTitles[activeView] || activeView} 
           userName={userData?.nombre}
           userRole={userData?.tipoPrestador}
+          userData={userData}
           onOpenMenu={() => setIsMobileMenuOpen(true)}
           pasoTutorial={pasoTutorial}
           setPasoTutorial={setPasoTutorial}

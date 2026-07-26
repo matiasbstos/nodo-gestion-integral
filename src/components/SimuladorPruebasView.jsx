@@ -30,11 +30,32 @@ import { logAuditAction } from '../utils/auditLogger';
  * and immediate A4 PDF report generation for any selected official.
  */
 const SimuladorPruebasView = ({ userData }) => {
+  const isAdmin = userData?.role === 'admin_global' || userData?.role === 'admin_local' || userData?.tipoPrestador?.toLowerCase().includes('admin');
+
   const [funcionarios, setFuncionarios] = useState([]);
   const [selectedFuncId, setSelectedFuncId] = useState('');
   const [selectedFunc, setSelectedFunc] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState(null);
+
+  if (!isAdmin) {
+    return (
+      <div className="p-12 max-w-2xl mx-auto text-center space-y-6 animate-fade-in font-sans">
+        <div className="w-20 h-20 bg-rose-50 text-rose-600 rounded-3xl flex items-center justify-center mx-auto border border-rose-200 shadow-lg shadow-rose-100">
+          <ShieldAlert size={40} />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black text-secondary">Acceso Restringido</h2>
+          <p className="text-sm text-gray-500 font-semibold leading-relaxed">
+            El <strong>Simulador de Pruebas</strong> y la gestión del <strong>Modo Prueba</strong> están reservados exclusivamente para los <strong>Administradores Locales y Globales</strong> del sistema NODO.
+          </p>
+        </div>
+        <p className="text-xs text-gray-400 italic">
+          Si requieres acceso de prueba para validar tu pauta o perfil, solicita la habilitación al Administrador Global.
+        </p>
+      </div>
+    );
+  }
 
   // Turn Simulation Form State
   const [shiftDate, setShiftDate] = useState('2026-06-15');

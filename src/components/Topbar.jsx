@@ -1,13 +1,29 @@
 import React from 'react';
-import { Bell, Settings, X, Info, AlertTriangle, CheckCircle, Menu } from 'lucide-react';
+import { Bell, Settings, X, Info, AlertTriangle, CheckCircle, Menu, FlaskConical } from 'lucide-react';
 
-const Topbar = ({ currentViewTitle, userName, userRole, onOpenMenu }) => {
+const Topbar = ({ currentViewTitle, userName, userRole, userData, onOpenMenu }) => {
   const [showNotifications, setShowNotifications] = React.useState(false);
   const [notifications, setNotifications] = React.useState([
     { id: 1, title: 'Entrada Registrada', message: 'Has marcado entrada correctamente a las 08:02 AM', type: 'success', time: 'Hace 2h' },
     { id: 2, title: 'Alerta de Rango', message: 'Te encuentras fuera del radio de marcaje del centro.', type: 'warning', time: 'Hace 15m' },
     { id: 3, title: 'Nuevo Turno Asignado', message: 'Se ha programado un nuevo turno para el 29 de Abril.', type: 'info', time: 'Hace 1h' },
   ]);
+
+  const isAdmin = userData?.role === 'admin_global' || userData?.role === 'admin_local' || userRole?.toLowerCase().includes('admin');
+
+  const handleToggleModoPrueba = async () => {
+    if (!userData?.uid && !userData?.id) return;
+    try {
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const { db } = await import('../firebase');
+      const newStatus = !userData.modoPruebaActivo;
+      await updateDoc(doc(db, 'usuarios', userData.uid || userData.id), {
+        modoPruebaActivo: newStatus
+      });
+    } catch (err) {
+      console.error("Error toggling modo prueba:", err);
+    }
+  };
 
   const getIcon = (type) => {
     switch(type) {
@@ -36,7 +52,22 @@ const Topbar = ({ currentViewTitle, userName, userRole, onOpenMenu }) => {
         </div>
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-4">
+        {isAdmin && (
+          <button
+            onClick={handleToggleModoPrueba}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${
+              userData?.modoPruebaActivo
+                ? 'bg-purple-100 text-purple-900 border-purple-300 shadow-sm animate-pulse'
+                : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'
+            }`}
+            title="Activar / Desactivar Modo Prueba (Exclusivo Administradores)"
+          >
+            <FlaskConical size={14} className={userData?.modoPruebaActivo ? 'text-purple-600' : 'text-gray-400'} />
+            <span className="hidden sm:inline">{userData?.modoPruebaActivo ? 'Modo Prueba: ON' : 'Modo Prueba: OFF'}</span>
+          </button>
+        )}
+
         <div className="relative">
           <button 
             onClick={() => setShowNotifications(!showNotifications)}
