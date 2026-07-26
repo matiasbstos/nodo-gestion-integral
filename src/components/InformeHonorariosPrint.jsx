@@ -1,15 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Printer, Edit3, Save, Download } from 'lucide-react';
+import { logAuditAction } from '../utils/auditLogger';
 
 /**
  * InformeHonorariosPrint Component
  * Exact pixel-perfect replica of "INFORME PRESTACIÓN SERVICIOS" (Page 1 and Page 2).
- * Styled with exact typography matching official specs:
- *  - Subtitle: Myriad Pro 14pt (Italic)
- *  - Address: Bookman Old Style 8pt (Italic)
- *  - Main Titles: Segoe UI 20pt (Bold, Underlined)
- *  - Metadata Fields: Calibri 11pt (Labels Bold, Values Regular)
- *  - Signatures & Bank Details: Segoe UI 8pt (Bold / Regular)
  */
 const InformeHonorariosPrint = ({
   funcionario = {
@@ -86,6 +81,36 @@ const InformeHonorariosPrint = ({
     fechaAño: '2026'
   });
 
+  // Sync props to formData when external calculation changes
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      funcionarioNombre: funcionario.nombre || prev.funcionarioNombre || '',
+      funcionarioRut: funcionario.rut || prev.funcionarioRut || '',
+      funcionarioCargo: funcionario.cargo || prev.funcionarioCargo || '',
+      funcionarioLugar: funcionario.lugar || prev.funcionarioLugar || 'SAR Arpillerista Elsa Romo Aravena',
+      periodo: periodo || prev.periodo || 'JULIO 2026',
+      valorHoraLuVi: resumenHoras.valorHoraLuVi || prev.valorHoraLuVi || 21000,
+      horasLuVi: resumenHoras.horasLuVi !== undefined ? resumenHoras.horasLuVi : prev.horasLuVi,
+      valorHoraSaDoFest: resumenHoras.valorHoraSaDoFest || prev.valorHoraSaDoFest || 21000,
+      horasSaDoFest: resumenHoras.horasSaDoFest !== undefined ? resumenHoras.horasSaDoFest : prev.horasSaDoFest,
+      valorMensual: resumenHoras.valorMensual || prev.valorMensual || 0,
+      diasTrabajados: resumenHoras.diasTrabajados || prev.diasTrabajados || 0
+    }));
+  }, [funcionario, periodo, resumenHoras]);
+
+  const handleToggleEdit = async () => {
+    if (isEditing) {
+      try {
+        await logAuditAction('AJUSTE_MANUAL_HORAS_RRHH', `Recursos Humanos ajustó los valores del informe para ${formData.funcionarioNombre} (${formData.periodo}): Hábiles=${formData.horasLuVi}h, Inhábiles=${formData.horasSaDoFest}h, Subtotal=${totalLuVi + totalSaDoFest}`, null, funcionario, 'honorarios');
+        if (onSaveData) onSaveData(formData);
+      } catch (e) {
+        console.error("Error logging audit for report edit:", e);
+      }
+    }
+    setIsEditing(!isEditing);
+  };
+
   // Calculate totals
   const totalLuVi = Math.round((formData.valorHoraLuVi || 0) * (formData.horasLuVi || 0));
   const totalSaDoFest = Math.round((formData.valorHoraSaDoFest || 0) * (formData.horasSaDoFest || 0));
@@ -130,15 +155,16 @@ const InformeHonorariosPrint = ({
         <div className="flex items-center gap-3">
           {allowEdit && (
             <button
-              onClick={() => setIsEditing(!isEditing)}
+              onClick={handleToggleEdit}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border ${
                 isEditing 
                   ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-400 shadow-md' 
                   : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
               }`}
+              title="Ajustar manualmente horas o corregir discrepancias para Recursos Humanos"
             >
               {isEditing ? <Save size={15} /> : <Edit3 size={15} />}
-              {isEditing ? 'Modo Edición Activo' : 'Modificar Datos'}
+              {isEditing ? '💾 Guardar Ajustes RRHH' : '✏️ Ajustar Horas / Corregir RRHH'}
             </button>
           )}
 

@@ -118,7 +118,10 @@ const MisHonorariosView = ({ userData }) => {
     </div>
   );
 
-  const tarifaBase = userData?.valorHora || 21000;
+  const proyeccionBase = calcularProyeccionTurno(userData?.categoriaLey || 'E', 'Turno 1', userData?.tipoPrestador || 'Administrativo');
+  const tarifaNormal = proyeccionBase.tarifaHoraHabil || 21000;
+  const tarifaFestivo = proyeccionBase.tarifaHoraInhabil || 21000;
+  const periodoNombreStr = new Date(2026, Number(mesSeleccionado), 1).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' }).toUpperCase();
 
   if (showPrintView) {
     return (
@@ -137,16 +140,16 @@ const MisHonorariosView = ({ userData }) => {
             nombre: userData?.nombre || 'Funcionario',
             rut: userData?.rut || '',
             cargo: userData?.tipoPrestador || 'Médico Cirujano',
-            lugar: userData?.centroAsignado || 'SAR'
+            lugar: userData?.centroAsignado || 'SAR Arpillerista Elsa Romo Aravena'
           }}
-          periodo="JUNIO 2026"
+          periodo={periodoNombreStr}
           resumenHoras={{
-            valorHoraLuVi: tarifaBase,
+            valorHoraLuVi: tarifaNormal,
             horasLuVi: horasLuVi,
-            valorHoraSaDoFest: tarifaBase,
+            valorHoraSaDoFest: tarifaFestivo,
             horasSaDoFest: horasSaDoFest,
-            valorMensual: 0,
-            diasTrabajados: 0
+            valorMensual: totalMonto,
+            diasTrabajados: asistencias.length
           }}
           datosBancarios={{
             tipoCuenta: userData?.tipoCuenta || 'Cuenta Corriente',
@@ -180,11 +183,14 @@ const MisHonorariosView = ({ userData }) => {
         <div className="flex items-center gap-4 bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
           <select 
             value={mesSeleccionado}
-            onChange={(e) => setMesSeleccionado(e.target.value)}
-            className="bg-transparent border-none text-sm font-bold text-secondary focus:ring-0 cursor-pointer"
+            onChange={(e) => setMesSeleccionado(Number(e.target.value))}
+            className="bg-transparent border-none text-sm font-bold text-secondary focus:ring-0 cursor-pointer capitalize"
           >
-            <option value={4}>Mayo 2026</option>
-            <option value={3}>Abril 2026</option>
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(mIndex => (
+              <option key={mIndex} value={mIndex}>
+                {new Date(2026, mIndex, 1).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}
+              </option>
+            ))}
           </select>
           <div className="h-6 w-px bg-gray-100"></div>
           <button 
