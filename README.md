@@ -99,6 +99,39 @@ nodo-gestion-integral/
 
 ## 🧱 Muro de Actualizaciones (Changelog)
 
+### 🚀 versión 1.6.0 — (26 de Julio de 2026)
+
+* 💰 **Desglose Consolidado de Horas Hábiles vs Inhábiles & Tarifas Ley 19.378**:
+  * Integración del desglose financiero diario y mensual en la vista **Mis Honorarios** y en el expediente administrativo (**Funcionarios -> Honorarios & Pagos**).
+  * Cálculo dinámico de horas hábiles (Lunes a Viernes), inhábiles/festivas (Sábado, Domingo y Festivos), retención de honorarios SII (14.5%) y líquido neto estimado a percibir.
+
+* 📅 **Grilla Mensual Interactiva de Turnos (`Mis Turnos`)**:
+  * Incorporación de vista dual en la pauta personal del funcionario: `📋 Lista` y `📅 Grilla de Mes` de 7 columnas.
+  * Resalte visual de la casilla del día actual mediante un anillo verde esmeralda y la insignia pulsante `HOY`.
+  * Visualización de insignias de color por tipo de turno (Turno 1 Verde, Turno 2 Amarillo, Turno 3 Celeste, Refuerzo Púrpura) y novedades justificadas (Licencias Médicas, Vacaciones, Permisos).
+
+* 📊 **Resumen Consolidado Operativo (Dashboard)**:
+  * Renombrado oficial del módulo a **Resumen Consolidado Operativo**.
+  * Cómputo dinámico desde Firebase Firestore para los 4 indicadores KPI superiores: *Gasto Mensual Valorizado*, *Tasa de Ausentismo*, *Alertas de Retrasos* y *Tiempo Adicional*.
+
+* 📄 **Sincronización del Informe de Prestaciones (PDF) & Ajuste Manual RRHH**:
+  * Sincronización automática de las horas hábiles e inhábiles del mes seleccionado con el documento oficial A4 imprimible (`<InformeHonorariosPrint />`), resolviendo informes en $0.
+  * Selector dinámico en pantalla con los **12 meses del año 2026**.
+  * Habilitación del botón **`✏️ Ajustar Horas / Corregir RRHH`** para que Recursos Humanos aplique correcciones manuales y las registre automáticamente en la auditoría.
+
+* 📅 **Fechas de Corte Estrictas por Modalidad Contractual**:
+  * **Honorarios por Horas**: Corte estricto a Fin de Mes (**01 al 28 / 30 / 31 del mes actual**).
+  * **Plazo Fijo / Horas Extras**: Corte del **21 del mes anterior al 20 del mes actual** (ciclo mensual 21-20).
+  * Despliegue de insignias de período en pantalla para evitar acumulaciones entre meses.
+
+* 🔒 **Punto de Verificación y Cierre de Corte por Recursos Humanos**:
+  * Control interactivo de cierre en la pantalla de honorarios e informes para Administradores y RRHH.
+  * Botón **`🔒 Validar y Cerrar Período de Corte`** que congela los turnos del período con `estadoCierreRRHH: 'bloqueado'` para evitar discrepancias por modificaciones retroactivas *a posteriori*.
+
+* 🧪 **Flujo de Laboratorio Externo & Señalética Global de Modo Prueba ON**:
+  * Ajuste del **Simulador de Pruebas** para crear los turnos en el laboratorio y realizar la prueba de marcaje, confirmación y consulta de honorarios por fuera en las pantallas reales.
+  * Indicador de alta visibilidad **`[Modo Prueba: ON]`** y distintivo 🧪 en la barra superior junto al usuario (`Topbar`), avisos emergentes de acción y marcas de agua en montos e informes PDF.
+
 ### 🚀 versión 1.5.0 — (26 de Julio de 2026)
 
 * 💵 **Diccionario de Valores Ley 19.378 (`escalaRemuneraciones.js`)**:
