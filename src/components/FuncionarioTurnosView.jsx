@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Clock, MapPin, ChevronLeft, ChevronRight, Info, X, Loader2, Calculator, TrendingUp, Receipt, CheckCircle2, Stethoscope, Umbrella, ClipboardCheck, AlertTriangle, Lock } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, ChevronLeft, ChevronRight, Info, X, Loader2, Calculator, TrendingUp, Receipt, CheckCircle2, Stethoscope, Umbrella, ClipboardCheck, AlertTriangle, Lock, List, Trash2 } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { calcularProyeccionTurno } from '../utils/escalaRemuneraciones';
@@ -267,10 +267,10 @@ const FuncionarioTurnosView = ({ userData }) => {
       
       const isTestMode = userData?.modoPruebaActivo || selectedShiftToAccept.modoPrueba || selectedShiftToAccept.esPrueba;
       const msgText = isTestMode 
-        ? '🧪 [MODO PRUEBA ACTIVO] Turno verificado y aceptado en simulación. Cómputo cargado en informe.' 
+        ? '[MODO SIMULACIÓN] Turno verificado y aceptado en simulación. Cómputo cargado en informe.' 
         : '¡Turno aceptado con éxito! Se ha habilitado la opción para iniciar la jornada.';
       
-      showNotify(msgText, isTestMode ? '🧪 Modo Prueba: Turno Aceptado' : 'Turno Confirmado', 'success');
+      showNotify(msgText, isTestMode ? 'Modo Simulación: Turno Aceptado' : 'Turno Confirmado', 'success');
     } catch (err) {
       console.error(err);
       showNotify('Error al aceptar el turno: ' + err.message, 'Error al Aceptar', 'error');
@@ -280,7 +280,7 @@ const FuncionarioTurnosView = ({ userData }) => {
   };
 
   const handleDeleteSingleTestShift = async (shiftId) => {
-    if (!window.confirm("🗑️ ¿Deseas eliminar este turno de prueba de la base de datos?")) return;
+    if (!window.confirm("¿Deseas eliminar este turno de prueba de la base de datos?")) return;
     try {
       const { doc, deleteDoc } = await import('firebase/firestore');
       await deleteDoc(doc(db, 'turnos', shiftId));
@@ -339,19 +339,21 @@ const FuncionarioTurnosView = ({ userData }) => {
             <div className="flex items-center gap-1 bg-gray-200/60 p-1 rounded-2xl">
               <button 
                 onClick={() => setVistaModo('lista')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                  vistaModo === 'lista' ? 'bg-white text-secondary shadow-sm' : 'text-gray-500 hover:text-secondary'
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  vistaModo === 'lista' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                📋 Lista
+                <List size={13} strokeWidth={1.5} />
+                <span>Lista</span>
               </button>
               <button 
                 onClick={() => setVistaModo('calendario')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                  vistaModo === 'calendario' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-secondary'
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  vistaModo === 'calendario' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                📅 Grilla de Mes
+                <CalendarIcon size={13} strokeWidth={1.5} />
+                <span>Grilla de Mes</span>
               </button>
             </div>
 
@@ -617,10 +619,11 @@ const FuncionarioTurnosView = ({ userData }) => {
                         {(userData?.role === 'admin_global' || userData?.role === 'admin_local' || userData?.modoPruebaActivo || turno.esPrueba || turno.modoPrueba) && (
                           <button
                             onClick={() => handleDeleteSingleTestShift(turno.id)}
-                            className="px-2.5 py-1 text-[10px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition-all flex items-center gap-1"
+                            className="px-2.5 py-1 text-[10px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition-all flex items-center gap-1"
                             title="Eliminar este turno de prueba específico de la base de datos"
                           >
-                            🗑️ Eliminar Registro
+                            <Trash2 size={11} strokeWidth={1.5} />
+                            <span>Eliminar Registro</span>
                           </button>
                         )}
                       </div>

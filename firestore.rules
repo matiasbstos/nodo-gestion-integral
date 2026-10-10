@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Colección de Usuarios y Perfiles (Lectura abierta para resolución de RUT en Login)
+    match /usuarios/{docId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Anotaciones de Hoja de Vida
+    match /anotaciones_hoja_vida/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Evaluaciones de Desempeño Ley 19.378
+    match /evaluaciones_desempeno/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Alertas y Notificaciones
+    match /alertas/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Turnos y Asistencias
+    match /turnos/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /asistencias/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Auditoría y Registros de Control
+    match /auditoria/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /auditoria_gps_pruebas/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Informes y Prestaciones
+    match /informes/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /informes_prestaciones/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Honorarios y Tarifas
+    match /honorarios/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /matriz_honorarios/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /tarifario/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /historial_tarifas/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /historial_tarifas_maestras/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Novedades
+    match /novedades/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Regla global por defecto para usuarios autenticados
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}

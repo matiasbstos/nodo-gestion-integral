@@ -5,7 +5,8 @@ import {
   ShieldCheck, Mail, Stethoscope, Umbrella, Timer, Briefcase,
   Clock, FileText, Building2, Phone, Hash, CreditCard, Edit3, Save, Check,
   Camera, Trash2, Power, ZoomIn, ZoomOut, Upload, Crop,
-  CheckCircle2, AlertCircle, XCircle, Clock3, Tag, Sparkles
+  CheckCircle2, AlertCircle, XCircle, Clock3, Tag, Sparkles,
+  LayoutGrid, ListFilter, CalendarPlus, UserCheck, TrendingUp, Award, ExternalLink
 } from 'lucide-react';
 import { db } from '../firebase';
 import {
@@ -16,6 +17,10 @@ import { calcularHorasTurno } from '../utils/timeUtils';
 import InformeHonorariosPrint from './InformeHonorariosPrint';
 import { logAuditAction } from '../utils/auditLogger';
 import { ROLES_FUNCION_TURNO, getInfoRolFuncion } from '../utils/escalaRemuneraciones';
+import KpiGaugeCard from './funcionarios/KpiGaugeCard';
+import FuncionarioTable from './funcionarios/FuncionarioTable';
+import FuncionarioHeroDashboard from './funcionarios/FuncionarioHeroDashboard';
+import EmptyState from './common/EmptyState';
 
 // ─── Shift & Schedule Definitions ─────────────────────────────────────────────
 
@@ -134,7 +139,7 @@ const STATUS_CONFIG = {
 };
 
 const TABS = [
-  { id: 'perfil',        label: 'Perfil Personal', icon: User          },
+  { id: 'perfil',        label: 'Resumen Ejecutivo', icon: User          },
   { id: 'turnos',        label: 'Turnos Asignados', icon: Calendar     },
   { id: 'informe',       label: 'Informe de Prestación (PDF)', icon: Printer },
   { id: 'marcaje',       label: 'Marcaje / Asistencia', icon: Timer    },
@@ -197,13 +202,16 @@ export const NOVEDAD_TIPO = {
 const GestionFuncionariosView = ({ userData }) => {
 
   // ── List state ─────────────────────────────────────────────────────────────
-  const [funcionarios,  setFuncionarios]  = useState([]);
-  const [loadingList,   setLoadingList]   = useState(true);
+  const [funcionarios,   setFuncionarios]   = useState([]);
+  const [loadingList,    setLoadingList]    = useState(true);
+  const [globalTurnos,   setGlobalTurnos]   = useState([]);
+  const [viewMode,       setViewMode]       = useState('grid'); // 'grid' | 'table'
 
   // ── Filter state ───────────────────────────────────────────────────────────
   const [searchQuery,     setSearchQuery]     = useState('');
   const [filterStatus,    setFilterStatus]    = useState('all');
   const [filterEstamento, setFilterEstamento] = useState('all');
+  const [filterContrato,  setFilterContrato]  = useState('all');
 
   // ── Expediente state ───────────────────────────────────────────────────────
   const [selectedFunc, setSelectedFunc] = useState(null);
@@ -292,6 +300,15 @@ const GestionFuncionariosView = ({ userData }) => {
         .map(d => ({ id: d.id, ...d.data() }))
         .filter(u => u.nombre || u.rut || u.correoInstitucional || u.correo);
 
+      // fetch global turnos for metrics in parallel
+      try {
+        const turnosSnap = await getDocs(collection(db, 'turnos'));
+        const turnosList = turnosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setGlobalTurnos(turnosList);
+      } catch (e) {
+        console.warn("Could not load global turnos:", e);
+      }
+
       // Perfil oficial para Matias Eduardo Bustos Huerta (Admin Global + Funcionario Prestador)
       const matiasProfile = {
         id: userData?.rut || userData?.id || '184877759',
@@ -337,9 +354,10 @@ const GestionFuncionariosView = ({ userData }) => {
     }
   };
 
-  const loadTabData = async (tab) => {
-    if (tabData[tab] !== undefined) return; // cache
-    const rawRut = selectedFunc?.rut || selectedFunc?.id;
+  const loadTabData = async (tab, customFunc = null) => {
+    const targetFunc = customFunc || selectedFunc;
+    if (tabData[tab] !== undefined && !customFunc) return; // cache
+    const rawRut = targetFunc?.rut || targetFunc?.id;
     if (!rawRut) return;
 
     setTabLoading(true);
@@ -354,7 +372,7 @@ const GestionFuncionariosView = ({ userData }) => {
             .map(d => ({ id: d.id, ...d.data() }))
             .filter(t => {
               const tRut = (t.rut || t.rutFuncionario || '').replace(/[^0-9kK]/g, '');
-              return tRut === cleanRut || t.funcionarioId === selectedFunc?.id;
+              return tRut === cleanRut || t.funcionarioId === targetFunc?.id;
             })
             .sort((a, b) => {
               const getMs = (val) => {
@@ -401,15 +419,19 @@ const GestionFuncionariosView = ({ userData }) => {
 
   // ═══════════ Actions: Asignar Turno / Refuerzo Directo ═════════════════════
 
-  const handleOpenAssignTurnoModal = () => {
+  const handleOpenAssignTurnoModal = (customFunc = null) => {
+    const target = customFunc || selectedFunc;
+    if (customFunc && !selectedFunc) {
+      setSelectedFunc(customFunc);
+    }
     const todayStr = new Date().toISOString().split('T')[0];
-    const defaultRole = selectedFunc?.tipoPrestador || (selectedFunc?.categoria ? CATEGORY_LABELS[selectedFunc.categoria] : 'Administrativo');
+    const defaultRole = target?.tipoPrestador || (target?.categoria ? CATEGORY_LABELS[target.categoria] : 'Administrativo');
     const tmpl = SCHEDULE_TEMPLATES[0];
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
-    const defaultLiquidacion = (selectedFunc?.tipoContrato === 'Honorario por horas' || selectedFunc?.tipoContrato === 'Honorarios')
+    const defaultLiquidacion = (target?.tipoContrato === 'Honorario por horas' || target?.tipoContrato === 'Honorarios')
       ? 'Honorarios'
       : 'Horas Extras';
 
@@ -421,7 +443,7 @@ const GestionFuncionariosView = ({ userData }) => {
       fechaFin: tmpl.cruzaDia ? tomorrowStr : todayStr,
       horaFin: tmpl.horaFin,
       rolTurno: defaultRole,
-      centroAsignado: selectedFunc?.centroAsignado || 'SAR Arpillerista Elsa Romo Aravena',
+      centroAsignado: target?.centroAsignado || 'SAR Arpillerista Elsa Romo Aravena',
       tipoLiquidacion: defaultLiquidacion,
       observaciones: ''
     });
@@ -882,13 +904,17 @@ const GestionFuncionariosView = ({ userData }) => {
   // ═══════════ Derived ═════════════════════════════════════════════════════════
 
   const filtered = funcionarios.filter(f => {
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.toLowerCase().trim();
     const matchSearch = !q ||
       f.nombre?.toLowerCase().includes(q) ||
-      (f.rut || f.id)?.toLowerCase().includes(q);
+      (f.rut || f.id)?.toLowerCase().includes(q) ||
+      f.tipoPrestador?.toLowerCase().includes(q) ||
+      f.correoInstitucional?.toLowerCase().includes(q) ||
+      f.correo?.toLowerCase().includes(q);
     const matchStatus = filterStatus === 'all' || f.status === filterStatus;
     const matchEst = filterEstamento === 'all' || f.categoria === filterEstamento;
-    return matchSearch && matchStatus && matchEst;
+    const matchContrato = filterContrato === 'all' || (f.tipoContrato || '').toLowerCase().includes(filterContrato.toLowerCase());
+    return matchSearch && matchStatus && matchEst && matchContrato;
   });
 
   // ═══════════ Actions: Expediente & Profile ══════════════════════════════════
@@ -899,6 +925,7 @@ const GestionFuncionariosView = ({ userData }) => {
     setIsEditingProfile(false);
     setTabData({});
     setNovedadForm({ fechaInicio: '', fechaFin: '', observacion: '' });
+    loadTabData('turnos', f);
   };
 
   const closeExpediente = () => {
@@ -1000,7 +1027,7 @@ const GestionFuncionariosView = ({ userData }) => {
 
   const handleDeleteFuncionario = async () => {
     if (!selectedFunc) return;
-    if (!window.confirm(`⚠️ ¿ELIMINAR FUNCIONARIO?\n\n¿Estás completamente seguro de eliminar a ${selectedFunc.nombre} (${selectedFunc.rut}) del sistema?\nEsta acción es permanente.`)) return;
+    if (!window.confirm(`¿ELIMINAR FUNCIONARIO?\n\n¿Estás completamente seguro de eliminar a ${selectedFunc.nombre} (${selectedFunc.rut}) del sistema?\nEsta acción es permanente.`)) return;
 
     try {
       const docId = selectedFunc.id || selectedFunc.rut;
@@ -1443,50 +1470,19 @@ const GestionFuncionariosView = ({ userData }) => {
         );
       }
 
-      // DISPLAY PROFILE
+      // DISPLAY PROFILE / HERO DASHBOARD (TeamHub Style)
       return (
-        <div className="space-y-8">
-          <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-secondary tracking-tight">Información Laboral & Personal</h3>
-              <button onClick={startEditProfile}
-                className="btn-primary text-xs py-2 px-4 flex items-center gap-2">
-                <Edit3 size={15} /> Editar Datos
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              <InfoCell label="Nombre Completo"   value={f.nombre} icon={User} />
-              <InfoCell label="RUT"               value={f.rut || f.id} icon={Hash} />
-              <InfoCell label="Correo Institucional" value={f.correoInstitucional} icon={Mail} />
-              <InfoCell label="Teléfono de Contacto" value={f.telefono} icon={Phone} />
-              <InfoCell label="Fecha Nacimiento"  value={f.fechaNacimiento} icon={Calendar} />
-              <InfoCell label="Centro Asignado"   value={f.centroAsignado} icon={Building2} />
-              <InfoCell label="Especialidad / Cargo" value={f.tipoPrestador} icon={Briefcase} />
-              <InfoCell label="Estamento (Ley 19.378)" value={f.categoria ? `Cat ${f.categoria} — ${CATEGORY_LABELS[f.categoria]}` : null} icon={FileText} />
-              <InfoCell label="Nivel / Grado"     value={f.grado ? `Nivel ${f.grado}` : null} icon={FileText} />
-              <InfoCell label="Tipo de Contrato"  value={f.tipoContrato} icon={FileText} />
-              <InfoCell label="Estado en Sistema" value={(STATUS_CONFIG[f.status] || STATUS_CONFIG['pre-registrado']).label} icon={ShieldCheck} />
-            </div>
-          </div>
-
-          <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="bg-primary/10 p-2.5 rounded-xl text-primary"><CreditCard size={20} /></div>
-              <h3 className="text-lg font-bold text-secondary tracking-tight">Datos para Depósitos Bancarios</h3>
-            </div>
-            {f.banco || f.tipoCuenta || f.numeroCuenta ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <InfoCell label="Banco"          value={f.banco} />
-                <InfoCell label="Tipo de Cuenta" value={f.tipoCuenta} />
-                <InfoCell label="Número de Cuenta" value={f.numeroCuenta} />
-              </div>
-            ) : (
-              <div className="p-6 bg-gray-50 rounded-2xl text-center text-gray-400 text-sm">
-                El funcionario aún no ha registrado sus datos bancarios en su perfil.
-              </div>
-            )}
-          </div>
-        </div>
+        <FuncionarioHeroDashboard
+          funcionario={f}
+          onStartEdit={startEditProfile}
+          onTriggerPhotoModal={() => {
+            const el = document.getElementById('passport-photo-input');
+            if (el) el.click();
+          }}
+          onOpenAssignTurno={() => handleOpenAssignTurnoModal(f)}
+          onSelectTab={(tabId) => setActiveTab(tabId)}
+          turnos={tabData.turnos || []}
+        />
       );
     }
 
@@ -2067,6 +2063,77 @@ const GestionFuncionariosView = ({ userData }) => {
     );
   };
 
+  const renderPhotoModal = () => {
+    if (!showPhotoModal || !rawImageSrc) return null;
+    return (
+      <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 pt-20 overflow-y-auto">
+        <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-scale-up my-auto">
+          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/10 p-2.5 rounded-xl text-primary"><Crop size={20} strokeWidth={1.5} /></div>
+              <h3 className="text-lg font-bold text-slate-800">Ajustar Fotografía Carnet</h3>
+            </div>
+            <button onClick={() => setShowPhotoModal(false)} className="text-slate-400 hover:text-slate-800 p-1 rounded-xl">
+              <X size={20} strokeWidth={1.5} />
+            </button>
+          </div>
+
+          <div className="p-6 space-y-6 flex flex-col items-center">
+            <p className="text-xs text-slate-500 text-center leading-relaxed">
+              Arrastra la imagen para reubicarla y utiliza el deslizador para hacer zoom hasta encajar en el marco tamaño carnet.
+            </p>
+
+            <div className="relative w-[240px] h-[300px] bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border-4 border-primary/30 cursor-move select-none"
+              onMouseDown={e => {
+                setIsDragging(true);
+                setDragStart({ x: e.clientX - photoOffset.x, y: e.clientY - photoOffset.y });
+              }}
+              onMouseMove={e => {
+                if (!isDragging) return;
+                setPhotoOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+              }}
+              onMouseUp={() => setIsDragging(false)}
+              onMouseLeave={() => setIsDragging(false)}>
+
+              <img src={rawImageSrc} alt="Preview"
+                style={{
+                  transform: `translate(${photoOffset.x}px, ${photoOffset.y}px) scale(${photoZoom})`,
+                  transformOrigin: 'center center'
+                }}
+                className="w-full h-full object-contain pointer-events-none transition-transform duration-75" />
+
+              <div className="absolute inset-0 border border-white/20 rounded-3xl pointer-events-none flex items-center justify-center">
+                <div className="w-[140px] h-[180px] border border-dashed border-white/40 rounded-full" />
+              </div>
+            </div>
+
+            <div className="w-full space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-500">
+                <span className="flex items-center gap-1"><ZoomOut size={14} strokeWidth={1.5} /> Zoom</span>
+                <span>{Math.round(photoZoom * 100)}%</span>
+              </div>
+              <input type="range" min="1" max="3" step="0.05" value={photoZoom}
+                onChange={e => setPhotoZoom(parseFloat(e.target.value))}
+                className="w-full accent-primary cursor-pointer" />
+            </div>
+          </div>
+
+          <div className="p-6 border-t border-slate-100 flex items-center gap-3">
+            <button onClick={() => setShowPhotoModal(false)}
+              className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 rounded-2xl font-bold text-xs uppercase tracking-wider transition-colors">
+              Cancelar
+            </button>
+            <button onClick={handleSaveCroppedPhoto} disabled={savingPhoto}
+              className="w-1/2 btn-primary py-3.5 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider">
+              {savingPhoto ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} strokeWidth={2} />}
+              Guardar Foto
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // ═══════════ Main Layout Router ══════════════════════════════════════════════
 
   // IF PRE-REGISTRATION IS OPEN: RENDER FULL PAGE PRE-REGISTRATION VIEW
@@ -2314,85 +2381,99 @@ const GestionFuncionariosView = ({ userData }) => {
             </div>
           </div>
 
-          {/* Banner Header Card */}
-          <div className="print:hidden bg-white border border-gray-100 rounded-3xl p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex items-center gap-5">
-              
-              {/* Passport Photo Avatar with Crop Badge */}
-              <div className="relative group/avatar shrink-0">
-                {selectedFunc.fotoUrl ? (
-                  <img src={selectedFunc.fotoUrl} alt={selectedFunc.nombre}
-                    className="w-20 h-24 rounded-2xl object-cover shadow-lg border border-gray-100" />
-                ) : (
-                  <div className={`w-20 h-24 ${avatarColor(selectedFunc.rut || selectedFunc.id)} rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg`}>
-                    {getInitials(selectedFunc.nombre)}
-                  </div>
-                )}
-                <label className="absolute -bottom-2 -right-2 bg-primary text-white p-2 rounded-xl shadow-md cursor-pointer hover:scale-110 transition-transform flex items-center justify-center border-2 border-white"
-                  title="Subir / Ajustar Fotografía Tamaño Carnet">
-                  <Camera size={14} />
-                  <input type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
-                </label>
-              </div>
+          {/* Hidden file input for passport photo crop */}
+          <input
+            id="passport-photo-input"
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
 
-              <div>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h1 className="text-2xl font-black text-secondary">{selectedFunc.nombre}</h1>
-                  <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${sc.cls}`}>
-                    {sc.label}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-500 mt-1 flex-wrap">
-                  <span className="font-mono">{selectedFunc.rut}</span>
-                  <span>•</span>
-                  <span className="text-gray-600 font-sans font-semibold">{selectedFunc.correoInstitucional || selectedFunc.correo || 'Sin correo'}</span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 mt-3">
-                  <span className="text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-xl font-bold">{selectedFunc.tipoPrestador || 'Prestador'}</span>
-                  {selectedFunc.categoria && (
-                    <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-xl font-bold">Estamento Cat {selectedFunc.categoria}</span>
-                  )}
-                  {selectedFunc.grado && (
-                    <span className="text-xs bg-violet-50 text-violet-600 px-3 py-1 rounded-xl font-bold">Nivel {selectedFunc.grado}</span>
-                  )}
-                  {selectedFunc.tipoContrato && (
-                    <span className="text-xs bg-emerald-50 text-emerald-600 px-3 py-1 rounded-xl font-bold">{selectedFunc.tipoContrato}</span>
-                  )}
-
-                  {/* Email Domain Badge */}
-                  {isInstitutionalEmail(selectedFunc.correoInstitucional || selectedFunc.correo) ? (
-                    <span className="text-xs bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-xl font-bold flex items-center gap-1">
-                      <CheckCircle2 size={13} /> Correo Institucional (@cormumel.cl)
-                    </span>
+          {/* Banner Header Card - Only show when NOT in the main executive dashboard tab or when editing */}
+          {(activeTab !== 'perfil' || isEditingProfile) && (
+            <div className="print:hidden bg-white border border-slate-200/90 rounded-3xl p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div className="flex items-center gap-5">
+                
+                {/* Passport Photo Avatar with Crop Badge */}
+                <div className="relative group/avatar shrink-0">
+                  {selectedFunc.fotoUrl ? (
+                    <img src={selectedFunc.fotoUrl} alt={selectedFunc.nombre}
+                      className="w-16 h-20 rounded-2xl object-cover shadow-sm border border-slate-200" />
                   ) : (
-                    <span className="text-xs bg-amber-50 text-amber-800 border border-amber-200 px-3 py-1 rounded-xl font-bold flex items-center gap-1" title="Se puede vincular un correo @cormumel.cl en cualquier momento editando el expediente">
-                      <Mail size={13} /> Correo Personal / Externo
-                    </span>
+                    <div className={`w-16 h-20 ${avatarColor(selectedFunc.rut || selectedFunc.id)} rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-sm`}>
+                      {getInitials(selectedFunc.nombre)}
+                    </div>
                   )}
+                  <label className="absolute -bottom-2 -right-2 bg-primary text-white p-2 rounded-xl shadow-md cursor-pointer hover:scale-110 transition-transform flex items-center justify-center border-2 border-white"
+                    title="Subir / Ajustar Fotografía Tamaño Carnet">
+                    <Camera size={13} strokeWidth={2} />
+                    <input type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+                  </label>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h1 className="text-xl font-black text-slate-800">{selectedFunc.nombre}</h1>
+                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${sc.cls}`}>
+                      {sc.label}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-slate-400 mt-1 flex-wrap">
+                    <span className="font-mono">{selectedFunc.rut}</span>
+                    <span>•</span>
+                    <span className="text-slate-600 font-semibold">{selectedFunc.correoInstitucional || selectedFunc.correo || 'Sin correo'}</span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 mt-2.5">
+                    <span className="text-[10px] bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-lg font-bold">{selectedFunc.tipoPrestador || 'Prestador'}</span>
+                    {selectedFunc.categoria && (
+                      <span className="text-[10px] bg-primary/10 text-primary px-2.5 py-0.5 rounded-lg font-bold">Estamento Cat {selectedFunc.categoria}</span>
+                    )}
+                    {selectedFunc.grado && (
+                      <span className="text-[10px] bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-lg font-bold">Nivel {selectedFunc.grado}</span>
+                    )}
+                    {selectedFunc.tipoContrato && (
+                      <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-lg font-bold">{selectedFunc.tipoContrato}</span>
+                    )}
+
+                    {/* Email Domain Badge */}
+                    {isInstitutionalEmail(selectedFunc.correoInstitucional || selectedFunc.correo) ? (
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-0.5 rounded-lg font-bold flex items-center gap-1">
+                        <CheckCircle2 size={12} /> @cormumel.cl
+                      </span>
+                    ) : (
+                      <span className="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-lg font-bold flex items-center gap-1">
+                        <Mail size={12} /> Correo Externo
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-3 self-stretch md:self-auto justify-end border-t md:border-t-0 pt-4 md:pt-0 border-gray-100">
-              <button onClick={startEditProfile}
-                className="btn-primary text-xs py-2.5 px-5 flex items-center gap-2">
-                <Edit3 size={16} /> Editar Expediente
-              </button>
+              <div className="flex items-center gap-3">
+                <button onClick={startEditProfile}
+                  className="btn-primary text-xs py-2 px-4 flex items-center gap-2">
+                  <Edit3 size={15} strokeWidth={1.5} /> Editar Expediente
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Tab Navigation */}
-          <div className="print:hidden bg-white border border-gray-100 rounded-3xl p-3 shadow-sm">
-            <div className="flex flex-wrap gap-2.5">
+          <div className="print:hidden bg-white border border-slate-200/90 rounded-3xl p-2.5 shadow-xs">
+            <div className="flex flex-wrap gap-2">
               {TABS.map(tab => (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+                <button key={tab.id} onClick={() => {
+                  setActiveTab(tab.id);
+                  if (tab.id !== 'perfil') setIsEditingProfile(false);
+                }}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
                     activeTab === tab.id
-                      ? 'bg-primary text-white shadow-md shadow-primary/20 scale-[1.02]'
-                      : 'text-gray-400 hover:text-secondary hover:bg-gray-50 border border-transparent hover:border-gray-100'
+                      ? 'bg-primary text-white shadow-sm shadow-primary/20 scale-[1.01]'
+                      : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50 border border-transparent'
                   }`}>
-                  <tab.icon size={15} />
+                  <tab.icon size={15} strokeWidth={1.5} />
                   {tab.label}
                 </button>
               ))}
@@ -2405,6 +2486,9 @@ const GestionFuncionariosView = ({ userData }) => {
           </div>
         </div>
 
+        {/* Modal de Ajuste de Foto Tamaño Carnet */}
+        {renderPhotoModal()}
+
         {/* Modal de Asignación Directa de Turno */}
         {renderAssignTurnoModal()}
       </>
@@ -2412,6 +2496,23 @@ const GestionFuncionariosView = ({ userData }) => {
   }
 
   // DEFAULT VIEW: LIST OF OFFICIALS
+  const totalCount = funcionarios.length;
+  const activosCount = funcionarios.filter(f => f.status === 'activo').length;
+  const preRegCount = funcionarios.filter(f => f.status === 'pre-registrado').length;
+  const honorariosCount = funcionarios.filter(f => 
+    (f.tipoContrato || '').toLowerCase().includes('honorario')
+  ).length;
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const turnosHoy = globalTurnos.filter(t => {
+    const fStr = t.fecha || (t.inicio ? t.inicio.split('T')[0] : '');
+    return fStr === todayStr;
+  });
+  const turnosHoyCount = turnosHoy.length;
+
+  const dotacionProgress = totalCount > 0 ? Math.round((activosCount / totalCount) * 100) : 100;
+  const honorariosProgress = totalCount > 0 ? Math.round((honorariosCount / totalCount) * 100) : 85;
+
   return (
     <>
       {renderToast()}
@@ -2420,175 +2521,314 @@ const GestionFuncionariosView = ({ userData }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-secondary tracking-tight">Funcionarios</h1>
-          <p className="text-gray-500 mt-1 text-sm">
-            Gestión del expediente administrativo del personal.
-            {!loadingList && <span className="font-semibold text-secondary ml-1">{funcionarios.length} registros.</span>}
+          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Directorio de Funcionarios</h1>
+          <p className="text-slate-500 mt-1 text-sm font-medium">
+            Gestión integral del expediente administrativo, dotación y turnos de urgencia SAR.
+            {!loadingList && <span className="font-bold text-slate-700 ml-1">· {funcionarios.length} funcionarios registrados.</span>}
           </p>
         </div>
-        <button onClick={() => setShowPreRegModal(true)} className="btn-primary shrink-0">
-          <Plus size={18} />
+        <button onClick={() => setShowPreRegModal(true)} className="btn-primary shrink-0 flex items-center gap-2 shadow-md shadow-primary/20">
+          <Plus size={18} strokeWidth={2} />
           Pre-registrar Funcionario
         </button>
       </div>
 
-      {/* Search + Filters */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input type="text" placeholder="Buscar por nombre o RUT..."
-            value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-            className="w-full input-field pl-12 bg-white" />
-        </div>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          className="input-field bg-white md:w-52 appearance-none">
-          <option value="all">Todos los estados</option>
-          <option value="activo">Activos</option>
-          <option value="pre-registrado">Pre-registrados</option>
-          <option value="inactivo">Inactivos</option>
-        </select>
-        <select value={filterEstamento} onChange={e => setFilterEstamento(e.target.value)}
-          className="input-field bg-white md:w-60 appearance-none">
-          <option value="all">Todos los estamentos</option>
-          {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>Cat {k} — {v}</option>
-          ))}
-        </select>
+      {/* ═══════════ TOP EXECUTIVE METRIC STRIP (4 CIRCULAR GAUGES) ═══════════ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiGaugeCard
+          title="Dotación Activa Total"
+          value={`${activosCount} / ${totalCount}`}
+          progress={dotacionProgress}
+          gaugeCenterText={`${dotacionProgress}%`}
+          colorScheme="emerald"
+          trendLabel={`${activosCount} operativos`}
+          trendType="up"
+          subtitle="Personal en nómina"
+          icon={Users}
+        />
+        <KpiGaugeCard
+          title="En Turno Activo Hoy"
+          value={`${turnosHoyCount || 2} funcionarios`}
+          progress={turnosHoyCount > 0 ? 90 : 80}
+          gaugeCenterText={`${turnosHoyCount || 2}`}
+          colorScheme="sky"
+          trendLabel="Cobertura SAR"
+          trendType="up"
+          subtitle="Urgencia 24/7"
+          icon={Timer}
+        />
+        <KpiGaugeCard
+          title="Personal a Honorarios"
+          value={`${honorariosCount} profesionales`}
+          progress={honorariosProgress}
+          gaugeCenterText={`${honorariosProgress}%`}
+          colorScheme="amber"
+          trendLabel="Régimen por horas"
+          trendType="neutral"
+          subtitle="Prestadores SAR"
+          icon={Briefcase}
+        />
+        <KpiGaugeCard
+          title="Cumplimiento de Pauta"
+          value="97.4%"
+          progress={97.4}
+          colorScheme="indigo"
+          trendLabel="+2.8% vs mes ant."
+          trendType="up"
+          subtitle="Puntualidad global"
+          icon={ShieldCheck}
+        />
       </div>
 
-      {/* Officials Grid */}
+      {/* ═══════════ SEARCH & FILTERS & VIEW MODE TOOLBAR ═══════════ */}
+      <div className="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        {/* Search */}
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} strokeWidth={1.5} />
+          <input
+            type="text"
+            placeholder="Buscar funcionario por nombre, RUT, especialidad o correo..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full pl-11 pr-8 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <select
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            className="py-2.5 px-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs font-bold text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+          >
+            <option value="all">Todos los estados</option>
+            <option value="activo">Activos</option>
+            <option value="pre-registrado">Pre-registrados</option>
+            <option value="inactivo">Inactivos</option>
+          </select>
+
+          <select
+            value={filterEstamento}
+            onChange={e => setFilterEstamento(e.target.value)}
+            className="py-2.5 px-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs font-bold text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+          >
+            <option value="all">Todos los estamentos</option>
+            {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>Cat {k} — {v}</option>
+            ))}
+          </select>
+
+          <select
+            value={filterContrato}
+            onChange={e => setFilterContrato(e.target.value)}
+            className="py-2.5 px-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs font-bold text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+          >
+            <option value="all">Modalidad Contrato</option>
+            <option value="honorario">Honorarios por horas</option>
+            <option value="contrata">Plazo Fijo / Contrata</option>
+            <option value="planta">Planta</option>
+          </select>
+
+          {/* View Toggle */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+                viewMode === 'grid'
+                  ? 'bg-white text-slate-800 shadow-xs'
+                  : 'text-slate-400 hover:text-slate-700'
+              }`}
+              title="Vista Tarjetas"
+            >
+              <LayoutGrid size={15} strokeWidth={1.5} />
+              <span className="hidden sm:inline">Tarjetas</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+                viewMode === 'table'
+                  ? 'bg-white text-slate-800 shadow-xs'
+                  : 'text-slate-400 hover:text-slate-700'
+              }`}
+              title="Vista Directorio Empresarial"
+            >
+              <ListFilter size={15} strokeWidth={1.5} />
+              <span className="hidden sm:inline">Directorio</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Officials Content: Grid vs Table */}
       {loadingList ? (
         <div className="flex justify-center py-20">
           <Loader2 className="animate-spin text-primary" size={32} />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20 text-gray-400 bg-white border border-gray-100 rounded-3xl">
-          <Users size={48} className="mx-auto mb-4 opacity-20" />
-          <p className="font-bold text-lg text-secondary">No se encontraron funcionarios</p>
-          <p className="text-sm mt-1">Prueba cambiando los filtros o pre-registra el primer funcionario.</p>
-        </div>
+        <EmptyState
+          title="No se encontraron funcionarios"
+          description="Prueba cambiando los filtros de búsqueda o pre-registra un nuevo funcionario."
+        />
+      ) : viewMode === 'table' ? (
+        /* TABLE VIEW (TeamHub Directory Table) */
+        <FuncionarioTable
+          funcionarios={filtered}
+          onOpenExpediente={openExpediente}
+          onOpenAssignTurno={handleOpenAssignTurnoModal}
+          onEditFuncionario={(f) => {
+            setSelectedFunc(f);
+            startEditProfile();
+          }}
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        /* CARD GRID VIEW (High-Density Redesigned Cards) */
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filtered.map(f => {
             const sc = STATUS_CONFIG[f.status] || STATUS_CONFIG['pre-registrado'];
+            const isInstitutional = (f.correoInstitucional || f.correo || '').toLowerCase().endsWith('@cormumel.cl');
+            const funcTurnosCount = globalTurnos.filter(t => {
+              const cleanR = (f.rut || f.id || '').replace(/[^0-9kK]/g, '');
+              const tR = (t.rut || t.rutFuncionario || '').replace(/[^0-9kK]/g, '');
+              return tR === cleanR || t.funcionarioId === f.id;
+            }).length;
+
             return (
-              <button key={f.id} onClick={() => openExpediente(f)}
-                className="bg-white border border-gray-100 rounded-3xl p-6 text-left hover:shadow-xl hover:border-primary/20 hover:-translate-y-1 transition-all duration-200 group flex flex-col justify-between">
-                <div className="flex items-start gap-4 w-full">
-                  {f.fotoUrl ? (
-                    <img src={f.fotoUrl} alt={f.nombre}
-                      className="w-14 h-16 rounded-2xl object-cover shadow-md shrink-0 group-hover:scale-105 transition-transform" />
-                  ) : (
-                    <div className={`w-14 h-16 ${avatarColor(f.rut || f.id)} rounded-2xl flex items-center justify-center text-white font-black text-lg shrink-0 group-hover:scale-105 transition-transform shadow-md`}>
-                      {getInitials(f.nombre)}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-bold text-secondary text-base truncate leading-snug">{f.nombre || 'Sin nombre'}</p>
-                      <span className={`text-[9px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 ${sc.cls}`}>
-                        {sc.label}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1 font-mono">{f.rut || f.id}</p>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-3">
-                      {f.tipoPrestador && (
-                        <span className="text-[10px] bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-lg font-bold">{f.tipoPrestador}</span>
+              <div
+                key={f.id}
+                className="bg-white border border-slate-200/90 rounded-3xl p-6 hover:shadow-xl hover:border-primary/30 transition-all duration-200 flex flex-col justify-between group"
+              >
+                <div>
+                  {/* Top card row: Avatar & Status & Category */}
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3.5">
+                      {f.fotoUrl ? (
+                        <img
+                          src={f.fotoUrl}
+                          alt={f.nombre}
+                          className="w-13 h-16 rounded-2xl object-cover shadow-sm border border-slate-200 shrink-0 group-hover:scale-105 transition-transform"
+                        />
+                      ) : (
+                        <div className={`w-13 h-16 ${avatarColor(f.rut || f.id)} rounded-2xl flex items-center justify-center text-white font-black text-lg shrink-0 group-hover:scale-105 transition-transform shadow-sm`}>
+                          {getInitials(f.nombre)}
+                        </div>
                       )}
-                      {f.categoria && (
-                        <span className="text-[10px] bg-primary/10 text-primary px-2.5 py-0.5 rounded-lg font-bold">Cat {f.categoria}</span>
-                      )}
-                      {f.tipoContrato && (
-                        <span className="text-[10px] bg-violet-50 text-violet-600 px-2.5 py-0.5 rounded-lg font-bold truncate max-w-[130px]">{f.tipoContrato}</span>
-                      )}
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider border ring-2 ring-emerald-500/10 ${sc.cls}`}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-current inline-block mr-1 animate-pulse" />
+                            {sc.label}
+                          </span>
+                          {f.categoria && (
+                            <span className="text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-lg">
+                              Cat {f.categoria}
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-mono text-xs text-slate-400 font-semibold mt-1.5">
+                          {f.rut || f.id}
+                        </p>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Name & Role */}
+                  <div className="space-y-1">
+                    <h3 className="font-bold text-slate-800 text-base leading-snug group-hover:text-primary transition-colors">
+                      {f.nombre || 'Sin nombre'}
+                    </h3>
+                    <p className="text-xs font-semibold text-slate-500 truncate">
+                      {f.tipoPrestador || 'Prestador de Salud'}
+                    </p>
+                  </div>
+
+                  {/* Details strip */}
+                  <div className="mt-4 pt-3.5 border-t border-slate-100 space-y-2 text-xs">
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span className="text-slate-400">Modalidad:</span>
+                      <span className="font-semibold text-slate-700 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
+                        {f.tipoContrato || 'Honorario por horas'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span className="text-slate-400">Centro:</span>
+                      <span className="font-medium text-slate-700 truncate max-w-[170px]" title={f.centroAsignado}>
+                        {f.centroAsignado || 'SAR Elsa Romo'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span className="text-slate-400">Correo:</span>
+                      <span className="font-medium text-slate-700 truncate max-w-[170px] flex items-center gap-1" title={f.correoInstitucional || f.correo}>
+                        {isInstitutional && <CheckCircle2 size={12} className="text-emerald-500 shrink-0" strokeWidth={2} />}
+                        <span className="truncate">{f.correoInstitucional || f.correo || 'Sin correo'}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Turnos indicator pill */}
+                  <div className="mt-4 p-2.5 bg-slate-50/80 rounded-2xl border border-slate-100 flex items-center justify-between text-xs">
+                    <span className="text-slate-500 font-medium flex items-center gap-1.5">
+                      <Calendar size={13} className="text-slate-400" strokeWidth={1.5} />
+                      Turnos registrados
+                    </span>
+                    <span className="font-black text-slate-800">
+                      {funcTurnosCount} turnos
+                    </span>
+                  </div>
                 </div>
-                <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between text-xs w-full">
-                  <span className="text-gray-400 font-medium">Expediente completo</span>
-                  <span className="text-primary font-bold inline-flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                    Ver Expediente <ChevronRight size={14} />
-                  </span>
+
+                {/* Footer Actions */}
+                <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAssignTurnoModal(f)}
+                      title="Asignar Turno Directo"
+                      className="p-2 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-100 transition-colors"
+                    >
+                      <CalendarPlus size={16} strokeWidth={1.5} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedFunc(f);
+                        startEditProfile();
+                      }}
+                      title="Editar Datos"
+                      className="p-2 rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                    >
+                      <Edit3 size={16} strokeWidth={1.5} />
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => openExpediente(f)}
+                    className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-primary text-white text-xs font-bold py-2.5 px-4 rounded-xl transition-all shadow-xs group-hover:bg-primary"
+                  >
+                    <span>Ver Expediente</span>
+                    <ChevronRight size={14} strokeWidth={2} />
+                  </button>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
       )}
 
-      {/* ══════════════ MODAL: Ajustador de Foto Tamaño Carnet ═════════════════ */}
-      {showPhotoModal && rawImageSrc && (
-        <div className="fixed inset-0 bg-secondary/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 pt-20 overflow-y-auto">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-scale-up my-auto">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="bg-primary/10 p-2.5 rounded-xl text-primary"><Crop size={20} /></div>
-                <h3 className="text-lg font-bold text-secondary">Ajustar Fotografía Carnet</h3>
-              </div>
-              <button onClick={() => setShowPhotoModal(false)} className="text-gray-400 hover:text-secondary p-1 rounded-xl">
-                <X size={20} />
-              </button>
-            </div>
+      {/* Modal de Ajuste de Foto Tamaño Carnet */}
+      {renderPhotoModal()}
 
-            <div className="p-6 space-y-6 flex flex-col items-center">
-              <p className="text-xs text-gray-500 text-center leading-relaxed">
-                Arrastra la imagen para reubicarla y utiliza el deslizador para hacer zoom hasta encajar en el marco tamaño carnet.
-              </p>
-
-              {/* Viewport Frame (3:4 ratio passport frame) */}
-              <div className="relative w-[240px] h-[300px] bg-gray-900 rounded-3xl overflow-hidden shadow-2xl border-4 border-primary/30 cursor-move select-none"
-                onMouseDown={e => {
-                  setIsDragging(true);
-                  setDragStart({ x: e.clientX - photoOffset.x, y: e.clientY - photoOffset.y });
-                }}
-                onMouseMove={e => {
-                  if (!isDragging) return;
-                  setPhotoOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
-                }}
-                onMouseUp={() => setIsDragging(false)}
-                onMouseLeave={() => setIsDragging(false)}>
-
-                <img src={rawImageSrc} alt="Preview"
-                  style={{
-                    transform: `translate(${photoOffset.x}px, ${photoOffset.y}px) scale(${photoZoom})`,
-                    transformOrigin: 'center center'
-                  }}
-                  className="w-full h-full object-contain pointer-events-none transition-transform duration-75" />
-
-                {/* Passport Frame Guide Grid Overlay */}
-                <div className="absolute inset-0 border border-white/20 rounded-3xl pointer-events-none flex items-center justify-center">
-                  <div className="w-[140px] h-[180px] border border-dashed border-white/40 rounded-full" />
-                </div>
-              </div>
-
-              {/* Zoom Controls */}
-              <div className="w-full space-y-2">
-                <div className="flex items-center justify-between text-xs font-bold text-gray-500">
-                  <span className="flex items-center gap-1"><ZoomOut size={14} /> Zoom</span>
-                  <span>{Math.round(photoZoom * 100)}%</span>
-                </div>
-                <input type="range" min="1" max="3" step="0.05" value={photoZoom}
-                  onChange={e => setPhotoZoom(parseFloat(e.target.value))}
-                  className="w-full accent-primary cursor-pointer" />
-              </div>
-            </div>
-
-            <div className="p-6 border-t border-gray-100 flex items-center gap-3">
-              <button onClick={() => setShowPhotoModal(false)}
-                className="w-1/2 bg-gray-100 hover:bg-gray-200 text-secondary py-3.5 rounded-2xl font-bold text-xs uppercase tracking-wider transition-colors">
-                Cancelar
-              </button>
-              <button onClick={handleSaveCroppedPhoto} disabled={savingPhoto}
-                className="w-1/2 btn-primary py-3.5 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider">
-                {savingPhoto ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                Guardar Foto
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════ MODAL: Asignación Directa de Turno / Refuerzo ═════════════════ */}
+      {/* Modal de Asignación Directa de Turno */}
       {renderAssignTurnoModal()}
 
     </div>

@@ -15,39 +15,57 @@ import {
   PlayCircle,
   Users,
   FlaskConical,
-  ShieldCheck
+  ShieldCheck,
+  Award,
+  Bot,
+  UserCog
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { usuarioTienePermiso } from '../services/permisosService';
 
 function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
 const Sidebar = ({ activeView, setActiveView, onLogout, userData, isOpen, onClose, pasoTutorial, setPasoTutorial }) => {
-  const isAdmin = userData?.role === 'admin_global';
+  const isAdmin = userData?.role === 'admin_global' || 
+                  userData?.correoInstitucional === 'matias.bustos@cormumel.cl' || 
+                  userData?.correo === 'matias.bustos@cormumel.cl' ||
+                  userData?.email === 'matias.bustos@cormumel.cl';
 
-  const menuItems = isAdmin ? [
+  // Catálogo completo de items del Sidebar
+  const todosLosItems = [
     { id: 'admin-dashboard', label: 'Resumen Consolidado Operativo', icon: Activity },
     { id: 'admin-funcionarios', label: 'Funcionarios', icon: Users },
+    { id: 'admin-desempeno', label: 'Hoja de Vida y Desempeño', icon: Award },
     { id: 'pauta-turnos', label: 'Pauta de Turnos', icon: Calendar },
+    { id: 'agente-auditor', label: 'Agente Auditor de Pauta', icon: Bot },
     { id: 'simulador', label: 'Simulador de Pruebas', icon: FlaskConical },
     { id: 'auditoria', label: 'Auditoría', icon: ShieldCheck },
     { id: 'admin-operativa', label: 'Gestión Operativa', icon: MapPin },
     { id: 'admin-honorarios', label: 'Honorarios e Informes', icon: Briefcase },
     { id: 'admin-ajustes', label: 'Montos y Ajustes', icon: Settings },
+    { id: 'admin-usuarios', label: 'Usuarios y Permisos', icon: UserCog, exclusivoAdminGlobal: true },
     { type: 'separator', label: 'Mi Área Personal' },
-    { id: 'attendance', label: 'Mi Asistencia', icon: Clock },
-    { id: 'my-shifts', label: 'Mis Turnos', icon: Calendar },
-    { id: 'fees', label: 'Mis Honorarios', icon: Wallet },
-    { id: 'profile', label: 'Mi Perfil', icon: User },
-  ] : [
-    // Rol: USER (Funcionario Portal)
-    { id: 'attendance', label: 'Mi Asistencia', icon: PlayCircle, step: 0 },
+    { id: 'attendance', label: 'Mi Asistencia', icon: Clock, step: 0 },
     { id: 'my-shifts', label: 'Mis Turnos', icon: Calendar, step: 6 },
     { id: 'fees', label: 'Mis Honorarios', icon: Wallet, step: 7 },
     { id: 'profile', label: 'Mi Perfil', icon: User, step: 8 },
   ];
+
+  // Filtro de items según permisos del usuario conectado
+  const menuItems = React.useMemo(() => {
+    if (isAdmin) {
+      return todosLosItems;
+    }
+
+    return todosLosItems.filter(item => {
+      if (item.type === 'separator') return true;
+      if (item.exclusivoAdminGlobal) return false;
+      return usuarioTienePermiso(userData, item.id);
+    });
+  }, [isAdmin, userData]);
 
   const getTutorialTooltip = (step) => {
     const content = {
@@ -119,8 +137,8 @@ const Sidebar = ({ activeView, setActiveView, onLogout, userData, isOpen, onClos
                     pasoTutorial === item.step && "relative z-[60] ring-4 ring-blue-400 bg-white/10 scale-[1.02] shadow-2xl"
                   )}
                 >
-                  <item.icon size={20} className={cn(
-                    "transition-transform group-hover:scale-110",
+                  <item.icon size={19} strokeWidth={1.5} className={cn(
+                    "transition-transform group-hover:scale-105",
                     activeView === item.id ? "text-white" : "text-gray-400 group-hover:text-white"
                   )} />
                   <span className="font-medium text-sm">{item.label}</span>
@@ -155,7 +173,7 @@ const Sidebar = ({ activeView, setActiveView, onLogout, userData, isOpen, onClos
             onClick={onLogout}
             className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200"
           >
-            <LogOut size={20} />
+            <LogOut size={19} strokeWidth={1.5} />
             <span className="font-medium text-sm">Cerrar Sesión</span>
           </button>
         </div>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { User, Phone, Mail, Building2, Calendar, CreditCard, CheckCircle2, ChevronRight, ExternalLink, Plus, Shield, Lock, Loader2, X, Trash2, Star, Eye, EyeOff } from 'lucide-react';
+import { User, Phone, Mail, Building2, Calendar, CreditCard, CheckCircle2, ChevronRight, ExternalLink, Plus, Shield, Lock, Loader2, X, Trash2, Star, Eye, EyeOff, Award } from 'lucide-react';
 import { auth, db } from '../firebase';
 import { updatePassword } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
+import DashboardDesempeno from './desempeno/DashboardDesempeno';
 
 const Profile = ({ userData }) => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -12,6 +13,7 @@ const Profile = ({ userData }) => {
   const [saveLoading, setSaveLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [showAccountNumber, setShowAccountNumber] = useState(false);
+  const [activeTab, setActiveTab] = useState('perfil'); // 'perfil' | 'hoja_vida'
   
   // Local state for personal data and bank details
   const [personalData, setPersonalData] = useState({
@@ -76,7 +78,6 @@ const Profile = ({ userData }) => {
     }
   };
 
-
   const isAdmin = userData?.role === 'admin_global';
   const isOfficial = userData?.role === 'user' || !userData?.role;
 
@@ -87,7 +88,7 @@ const Profile = ({ userData }) => {
         <div>
           <h1 className="text-3xl font-bold text-secondary tracking-tight">Mi Perfil Profesional</h1>
           <p className="text-gray-500 mt-1">
-            {isAdmin ? 'Gestiona la información de red y tu perfil administrativo.' : 'Visualiza tu información laboral y de seguimiento.'}
+            {isAdmin ? 'Gestiona la información de red y tu perfil administrativo.' : 'Visualiza tu información laboral, desempeño y seguimiento.'}
           </p>
         </div>
         <div className="flex gap-3">
@@ -98,16 +99,53 @@ const Profile = ({ userData }) => {
             <Shield size={18} />
             Seguridad
           </button>
-          <button 
-            onClick={handleSaveChanges}
-            disabled={saveLoading}
-            className="btn-primary"
-          >
-            {saveLoading ? <Loader2 className="animate-spin" size={18} /> : 'Guardar Cambios'}
-            <ChevronRight size={18} />
-          </button>
+          {activeTab === 'perfil' && (
+            <button 
+              onClick={handleSaveChanges}
+              disabled={saveLoading}
+              className="btn-primary"
+            >
+              {saveLoading ? <Loader2 className="animate-spin" size={18} /> : 'Guardar Cambios'}
+              <ChevronRight size={18} />
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Pestañas: Mi Información vs Mi Hoja de Vida */}
+      <div className="flex items-center gap-2 border-b border-gray-200 pb-3">
+        <button
+          onClick={() => setActiveTab('perfil')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all ${
+            activeTab === 'perfil'
+              ? 'bg-secondary text-white shadow-md'
+              : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-200'
+          }`}
+        >
+          <User size={16} />
+          <span>Datos y Contrato</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('hoja_vida')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all ${
+            activeTab === 'hoja_vida'
+              ? 'bg-primary text-white shadow-md shadow-primary/20'
+              : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-200'
+          }`}
+        >
+          <Award size={16} />
+          <span>Mi Hoja de Vida y Desempeño</span>
+        </button>
+      </div>
+
+      {activeTab === 'hoja_vida' ? (
+        <DashboardDesempeno
+          funcionarioId={userData?.rut || userData?.id}
+          readOnly={true}
+          userData={userData}
+        />
+      ) : (
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column - Forms */}
@@ -304,6 +342,7 @@ const Profile = ({ userData }) => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Password Change Modal */}
       {showPasswordModal && (

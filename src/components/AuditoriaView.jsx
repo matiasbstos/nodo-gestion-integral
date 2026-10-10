@@ -17,7 +17,8 @@ import {
   Eye,
   SlidersHorizontal,
   Lock,
-  Building2
+  Building2,
+  X
 } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
@@ -128,7 +129,7 @@ const AuditoriaView = ({ userData }) => {
   // Action Badge Styles
   const getActionBadge = (accion = '', isTest = false) => {
     if (isTest || (accion || '').includes('PRUEBA') || (accion || '').includes('SIMULAD')) {
-      return { label: `🧪 ${accion}`, cls: 'bg-purple-100 text-purple-900 border-purple-300 font-black' };
+      return { label: `[SIMULACIÓN] ${accion}`, cls: 'bg-purple-100 text-purple-900 border-purple-300 font-bold' };
     }
     if (accion.includes('TURNO') || accion.includes('PAUTA')) {
       return { label: accion, cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
@@ -314,9 +315,9 @@ const AuditoriaView = ({ userData }) => {
             onChange={e => setModeFilter(e.target.value)}
             className="input-field bg-purple-50/50 text-purple-900 border-purple-200 md:w-56 appearance-none font-bold text-xs"
           >
-            <option value="all">🌐 Todos los Modos</option>
-            <option value="prueba">🧪 Solo Modo Prueba</option>
-            <option value="real">🛡️ Solo Operaciones Reales</option>
+            <option value="all">Todos los Modos</option>
+            <option value="prueba">Solo Modo Simulación</option>
+            <option value="real">Solo Operaciones Reales</option>
           </select>
         </div>
       </div>
@@ -426,9 +427,9 @@ const AuditoriaView = ({ userData }) => {
               </div>
               <button 
                 onClick={() => setSelectedLog(null)}
-                className="text-gray-400 hover:text-secondary p-1 rounded-xl"
+                className="text-gray-400 hover:text-secondary p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
               >
-                ✕
+                <X size={16} strokeWidth={1.5} />
               </button>
             </div>
 
@@ -457,8 +458,8 @@ const AuditoriaView = ({ userData }) => {
                 </div>
 
                 {selectedLog.esModoPrueba && (
-                  <span className="px-3 py-1 bg-purple-100 text-purple-900 border border-purple-300 font-black rounded-xl text-xs uppercase tracking-wider shadow-xs">
-                    🧪 Modo Prueba
+                  <span className="px-2.5 py-1 bg-purple-100 text-purple-900 border border-purple-300 font-bold rounded-lg text-xs uppercase tracking-wider shadow-xs">
+                    Modo Simulación
                   </span>
                 )}
               </div>

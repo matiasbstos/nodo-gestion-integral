@@ -783,7 +783,7 @@ const PautaTurnosView = ({ userData }) => {
                                   </div>
                                   <div>
                                     <div className="flex items-center gap-2">
-                                      <span className="font-black text-xs uppercase text-rose-700 tracking-wider">⚠️ CARGO VACANTE</span>
+                                      <span className="font-bold text-xs uppercase text-rose-700 tracking-wider">CARGO VACANTE</span>
                                       <span className="text-[9px] bg-rose-600 text-white px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
                                         {t.estado?.replace('_', ' ')}
                                       </span>

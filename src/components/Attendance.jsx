@@ -20,7 +20,8 @@ import {
   Calculator,
   TrendingUp,
   Receipt,
-  ShieldCheck
+  ShieldCheck,
+  FlaskConical
 } from 'lucide-react';
 import { db } from '../firebase';
 import { calcularProyeccionTurno } from '../utils/escalaRemuneraciones';
@@ -374,7 +375,7 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
 
       if (now > ventanaFin) {
         return showNotify(
-          `⚠️ Tolerancia de Entrada Excedida:\nEste turno inició a las ${horaInicioStr}. El margen de tolerancia para marcar entrada es de máximo 10 minutos después de la hora de inicio.\nPor favor contacta al Administrador Local para gestionar un marcaje manual o justificación.`,
+          `Tolerancia de Entrada Excedida:\nEste turno inició a las ${horaInicioStr}. El margen de tolerancia para marcar entrada es de máximo 10 minutos después de la hora de inicio.\nPor favor contacta al Administrador Local para gestionar un marcaje manual o justificación.`,
           "Fuera de Tolerancia (Atraso Excedido)",
           "warning"
         );
@@ -518,7 +519,7 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
     const tipoNovedad = (shift?.tipoNovedad || shift?.motivoNovedad || '').toLowerCase();
     
     if (['licencia', 'vacaciones', 'permiso', 'ausente'].includes(estado) || tipoNovedad.includes('licencia') || tipoNovedad.includes('vacaciones') || tipoNovedad.includes('permiso')) {
-      showNotify("🔒 Este turno se encuentra eximido y justificado por la Administración (Licencia Médica, Vacaciones o Permiso Administrativo). No requiere ni permite ser aceptado por el funcionario.", "Turno Justificado", "warning");
+      showNotify("Este turno se encuentra eximido y justificado por la Administración (Licencia Médica, Vacaciones o Permiso Administrativo). No requiere ni permite ser aceptado por el funcionario.", "Turno Justificado", "warning");
       return;
     }
     setSelectedShiftToAccept(shift);
@@ -622,12 +623,13 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
       {/* Header & Tabs */}
       <div className="space-y-4">
         {userData?.modoPruebaActivo && (
-          <div className="p-4 bg-purple-100/90 border border-purple-300 rounded-3xl text-purple-900 font-extrabold text-xs flex items-center justify-between shadow-xs">
-            <span className="flex items-center gap-2">
-              🧪 MODO PRUEBA ACTIVO — LOS MARCAJES DE ENTRADA Y SALIDA ESTÁN EN SIMULACIÓN DE PRUEBA (GPS OMITIDO)
+          <div className="p-3.5 bg-slate-900 text-white border border-slate-800 rounded-2xl text-xs flex items-center justify-between shadow-xs">
+            <span className="flex items-center gap-2 font-medium">
+              <FlaskConical size={16} strokeWidth={1.5} className="text-amber-400" />
+              <span>Modo Simulación Activo — Marcajes de prueba sin restricción satelital de GPS</span>
             </span>
-            <span className="px-3 py-1 bg-purple-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider animate-pulse">
-              Modo Prueba: ON
+            <span className="px-2.5 py-1 bg-slate-800 border border-slate-700 text-amber-300 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+              Simulación
             </span>
           </div>
         )}
@@ -813,8 +815,8 @@ const Attendance = ({ userData, pasoTutorial, setPasoTutorial }) => {
                               Turno Hoy ({turno.fechaInicio?.toDate?.()?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '--:--'} - {turno.fechaFin?.toDate?.()?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '--:--'})
                             </span>
                           </div>
-                          <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full uppercase ${turno.aceptado ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse'}`}>
-                            {turno.aceptado ? '✓ Aceptado & Listo' : '⚡ Pendiente de Aceptación'}
+                          <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full uppercase inline-flex items-center gap-1 ${turno.aceptado ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80' : 'bg-amber-50 text-amber-700 border border-amber-200/80'}`}>
+                            {turno.aceptado ? 'Aceptado' : 'Pendiente de Aceptación'}
                           </span>
                         </div>
                         

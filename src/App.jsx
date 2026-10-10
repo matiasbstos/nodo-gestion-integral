@@ -14,6 +14,9 @@ import GestionFuncionariosView from './components/GestionFuncionariosView';
 import PautaTurnosView from './components/PautaTurnosView';
 import SimuladorPruebasView from './components/SimuladorPruebasView';
 import AuditoriaView from './components/AuditoriaView';
+import DashboardDesempeno from './components/desempeno/DashboardDesempeno';
+import AgenteAuditorDiscrepancias from './components/auditor/AgenteAuditorDiscrepancias';
+import GestionUsuariosRolesView from './components/GestionUsuariosRolesView';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -78,12 +81,16 @@ function App() {
               ...docSnapshot.data() 
             };
 
-            // Auto-promote user 184877759 to admin_global
-            if (docSnapshot.id === '184877759' && data.role !== 'admin_global') {
+            // Auto-promote user 184877759 o matias.bustos@cormumel.cl to admin_global
+            const isMatias = docSnapshot.id === '184877759' || 
+                             firebaseUser.email?.toLowerCase() === 'matias.bustos@cormumel.cl' ||
+                             data.correoInstitucional?.toLowerCase() === 'matias.bustos@cormumel.cl';
+
+            if (isMatias && data.role !== 'admin_global') {
               const userRef = doc(db, 'usuarios', docSnapshot.id);
               await updateDoc(userRef, { role: 'admin_global' });
               data.role = 'admin_global';
-              console.log("User 184877759 automatically promoted to admin_global in Firestore.");
+              console.log("Matias Bustos automatically promoted to admin_global in Firestore.");
             }
 
             console.log("User profile loaded for:", data.nombre, "Role:", data.role);
@@ -157,8 +164,12 @@ function App() {
         return <AdminDashboardView {...commonProps} />;
       case 'admin-funcionarios':
         return <GestionFuncionariosView {...commonProps} />;
+      case 'admin-desempeno':
+        return <DashboardDesempeno {...commonProps} />;
       case 'pauta-turnos':
         return <PautaTurnosView {...commonProps} />;
+      case 'agente-auditor':
+        return <AgenteAuditorDiscrepancias {...commonProps} />;
       case 'simulador':
         return <SimuladorPruebasView {...commonProps} />;
       case 'auditoria':
@@ -171,6 +182,8 @@ function App() {
         return <AdminHonorariosView {...commonProps} />;
       case 'admin-ajustes':
         return <MatrizRemuneracionalView {...commonProps} />;
+      case 'admin-usuarios':
+        return <GestionUsuariosRolesView {...commonProps} />;
       case 'reports':
         return (
           <div className="p-8 animate-fade-in">

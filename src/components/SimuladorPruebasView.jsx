@@ -254,7 +254,7 @@ const SimuladorPruebasView = ({ userData }) => {
 
   // 3. Limpiar / Resetear Datos de Prueba de Firebase
   const handleCleanTestData = async () => {
-    if (!window.confirm("🗑️ ¿Deseas eliminar todos los turnos y marcajes simulados creados durante las pruebas?\n\nEsta acción eliminará únicamente los datos generados durante las pruebas.")) return;
+    if (!window.confirm("¿Deseas eliminar todos los turnos y marcajes simulados creados durante las pruebas?\n\nEsta acción eliminará únicamente los datos generados durante las pruebas.")) return;
 
     setLoading(true);
     try {

@@ -16,7 +16,8 @@ import {
   Info,
   Printer,
   ChevronLeft,
-  Lock
+  Lock,
+  FlaskConical
 } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
@@ -210,7 +211,7 @@ const MisHonorariosView = ({ userData }) => {
       return;
     }
 
-    if (!window.confirm(`🔒 ¿Deseas VALIDAR Y BLOQUEAR el período de corte (${corteTextoInfo}) para este funcionario?\n\nUna vez verificado y cerrado por Recursos Humanos, los turnos no podrán ser modificados a posteriori.`)) return;
+    if (!window.confirm(`¿Deseas VALIDAR Y BLOQUEAR el período de corte (${corteTextoInfo}) para este funcionario?\n\nUna vez verificado y cerrado por Recursos Humanos, los turnos no podrán ser modificados a posteriori.`)) return;
 
     setLocking(true);
     try {
@@ -250,12 +251,13 @@ const MisHonorariosView = ({ userData }) => {
     <div className="p-8 max-w-[1600px] mx-auto space-y-8 animate-fade-in">
       {/* Modo Prueba Indicador Global */}
       {userData?.modoPruebaActivo && (
-        <div className="p-4 bg-purple-100/90 border border-purple-300 rounded-3xl text-purple-900 font-extrabold text-xs flex items-center justify-between shadow-xs">
-          <span className="flex items-center gap-2">
-            🧪 MODO PRUEBA ACTIVO — TODOS LOS VALORES Y MONTOS MOSTRADOS CORRESPONDEN A SIMULACIÓN EN VIVO
+        <div className="p-3.5 bg-slate-900 text-white border border-slate-800 rounded-2xl text-xs flex items-center justify-between shadow-xs">
+          <span className="flex items-center gap-2 font-medium">
+            <FlaskConical size={16} strokeWidth={1.5} className="text-amber-400" />
+            <span>Modo Simulación Activo — Valores y montos calculados bajo parámetros de prueba</span>
           </span>
-          <span className="px-3 py-1 bg-purple-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider animate-pulse">
-            Modo Prueba: ON
+          <span className="px-2.5 py-1 bg-slate-800 border border-slate-700 text-amber-300 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+            Simulación
           </span>
         </div>
       )}

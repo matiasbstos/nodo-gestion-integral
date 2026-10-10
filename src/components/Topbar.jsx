@@ -26,7 +26,7 @@ const Topbar = ({ currentViewTitle, userName, userRole, userData, onOpenMenu }) 
   };
 
   const handlePurgeAllTestData = async () => {
-    if (!window.confirm("🗑️ ¿Estás seguro de que deseas ELIMINAR TODOS LOS DATOS DE PRUEBA del sistema?\n\nEsta acción borrará únicamente turnos y marcajes simulados creados durante la prueba.")) return;
+    if (!window.confirm("¿Estás seguro de que deseas ELIMINAR TODOS LOS DATOS DE PRUEBA del sistema?\n\nEsta acción borrará únicamente turnos y marcajes simulados creados durante la prueba.")) return;
 
     try {
       const { collection, getDocs, deleteDoc, doc, updateDoc } = await import('firebase/firestore');
@@ -184,8 +184,8 @@ const Topbar = ({ currentViewTitle, userName, userRole, userData, onOpenMenu }) 
           <div className="w-10 h-10 rounded-full bg-primary/10 overflow-hidden border-2 border-purple-200 flex items-center justify-center text-primary font-bold relative shrink-0">
             {userName ? userName.charAt(0).toUpperCase() : '?'}
             {userData?.modoPruebaActivo && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-purple-600 rounded-full border-2 border-white flex items-center justify-center text-[9px] text-white font-bold" title="Modo Prueba Activado">
-                🧪
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-purple-600 rounded-full border-2 border-white flex items-center justify-center text-white" title="Modo Prueba Activado">
+                <FlaskConical size={9} strokeWidth={1.5} />
               </span>
             )}
           </div>
