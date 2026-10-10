@@ -119,11 +119,15 @@
     background: white !important;
   }
 
-  .break-after-page {
+  .break-after-page, .official-page {
     page-break-after: always !important;
     break-after: page !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+  }
+  .official-page:last-of-type {
+    page-break-after: auto !important;
+    break-after: auto !important;
   }
 
   table, tr, td, .avoid-page-break {

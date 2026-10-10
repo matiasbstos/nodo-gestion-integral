@@ -2,13 +2,13 @@ import React from 'react';
 
 /**
  * DocumentoOficialMelipilla
- * Recreación idéntica y estricta del Formulario Oficial de Pre-calificación / Calificación
+ * Recreación estricta y fiel al 100% del Formulario Oficial de Pre-calificación / Calificación
  * de la Corporación Municipal de Melipilla (Ley 19.378 APS).
  * 
  * Estructura de 3 Páginas Oficiales con saltos de página para impresión/PDF:
- * - Página 1: Identificación del Funcionario y Control de Asistencia.
- * - Página 2: I Factor Competencia (8 ítems).
- * - Página 3: II Factor Conducta Funcionaria (6 ítems) + Cuadro de Firmas.
+ * - Página 1: Encabezado Institucional Cormumel, Identificación del Funcionario y Control de Asistencia.
+ * - Página 2: I Factor Competencia (8 ítems: a - h) con columna continua y casillas a la derecha.
+ * - Página 3: II Factor Conducta Funcionaria (6 ítems: a - f) y Cuadro de Firmas al pie.
  */
 const DocumentoOficialMelipilla = ({
   evaluacion,
@@ -50,7 +50,7 @@ const DocumentoOficialMelipilla = ({
   const minutosAtraso = evaluacion?.controlAsistencia?.minutosAtraso ?? 0;
   const diasInasistentes = evaluacion?.controlAsistencia?.diasInasistentes ?? 0;
 
-  // Factores y Conceptos
+  // Conceptos evaluativos oficiales Cormumel
   const conceptos = ['MUY BUENO', 'BUENO', 'REGULAR', 'MALO'];
 
   const itemsCompetencia = [
@@ -77,19 +77,19 @@ const DocumentoOficialMelipilla = ({
   const factoresCondData = evaluacion?.factores?.conducta || {};
 
   return (
-    <div className="font-sans text-black bg-white select-text">
+    <div className="font-sans text-black bg-white select-text print:bg-white">
       
       {/* ══════════════════════════════════════════════════════════════════
           PÁGINA 1: ENCABEZADO, IDENTIFICACIÓN Y ASISTENCIA
       ══════════════════════════════════════════════════════════════════ */}
-      <div className="official-page min-h-[1050px] p-8 md:p-12 border border-slate-300 print:border-none print:p-0 mb-8 print:mb-0 bg-white">
+      <div className="official-page bg-white p-6 md:p-10 border border-slate-300 print:border-none print:p-0 mb-8 print:mb-0">
         
         {/* Cabecera Institucional Melipilla */}
-        <div className="flex items-center justify-between pb-4 mb-4">
-          {/* Logo Corporación Municipal de Melipilla */}
-          <div className="w-36 flex items-center gap-2">
+        <div className="flex items-start justify-between pb-3 mb-2">
+          {/* Logo Corporativo Municipal de Melipilla */}
+          <div className="w-36 pt-1 flex items-center gap-2">
             <div className="text-left font-sans leading-tight">
-              <div className="text-xl font-black text-blue-900 tracking-tighter">
+              <div className="text-2xl font-black text-blue-900 tracking-tighter">
                 COR<span className="text-red-700">PO</span>
               </div>
               <div className="text-[10px] font-bold text-blue-950 uppercase tracking-tight">
@@ -98,15 +98,18 @@ const DocumentoOficialMelipilla = ({
               <div className="text-[9px] font-semibold text-slate-700">
                 de Melipilla
               </div>
+              <div className="w-14 h-[2px] bg-blue-900 mt-0.5 flex">
+                <div className="w-1/2 h-full bg-red-700"></div>
+              </div>
             </div>
           </div>
 
           {/* Título Principal */}
-          <div className="text-center flex-1 pr-12">
-            <h1 className="text-base md:text-lg font-bold tracking-tight uppercase text-black">
+          <div className="text-center flex-1 pr-16 pt-1">
+            <h1 className="text-sm md:text-base font-normal tracking-wide uppercase text-black">
               CORPORACIÓN MUNICIPAL DE MELIPILLA
             </h1>
-            <h2 className="text-sm md:text-base font-bold tracking-wide uppercase text-black mt-1">
+            <h2 className="text-xs md:text-sm font-normal tracking-wide uppercase text-black mt-1">
               {tipoInforme === 'Calificación Final' 
                 ? 'FORMULARIO DE CALIFICACIÓN' 
                 : 'FORMULARIO DE PRE-CALIFICACIÓN'}
@@ -115,77 +118,77 @@ const DocumentoOficialMelipilla = ({
         </div>
 
         {/* Tabla Oficial de la Página 1 */}
-        <table className="w-full border-collapse border border-black text-xs md:text-sm">
+        <table className="w-full border-collapse border border-black text-xs md:text-[13px] table-fixed">
           <tbody>
             
             {/* Fila 1: Periodo de Evaluación */}
             <tr className="border-b border-black">
-              <td className="border-r border-black p-2 italic font-medium w-1/3">
+              <td className="border-r border-black p-1.5 italic font-medium w-[30%]">
                 Periodo de Evaluación
               </td>
-              <td className="border-r border-black p-2 text-center font-bold w-1/6">
+              <td className="border-r border-black p-1.5 text-center font-bold w-[17.5%]">
                 {inicio.diaMes}
               </td>
-              <td className="border-r border-black p-2 text-center font-bold w-1/6">
+              <td className="border-r border-black p-1.5 text-center font-bold w-[17.5%]">
                 {inicio.anio}
               </td>
-              <td className="border-r border-black p-2 text-center font-bold w-1/6">
+              <td className="border-r border-black p-1.5 text-center font-bold w-[17.5%]">
                 {fin.diaMes}
               </td>
-              <td className="p-2 text-center font-bold w-1/6">
+              <td className="p-1.5 text-center font-bold w-[17.5%]">
                 {fin.anio}
               </td>
             </tr>
 
             {/* Fila 2: Establecimiento */}
             <tr className="border-b border-black">
-              <td className="border-r border-black p-2 italic font-medium">
+              <td className="border-r border-black p-1.5 italic font-medium">
                 Establecimiento
               </td>
-              <td colSpan={4} className="p-2 font-normal">
+              <td colSpan={4} className="p-1.5 font-normal">
                 {establecimiento}
               </td>
             </tr>
 
             {/* Fila 3: Separador Identificación del Funcionario */}
             <tr className="border-b border-black">
-              <td colSpan={5} className="p-2 text-center italic font-semibold">
+              <td colSpan={5} className="p-1 text-center italic font-semibold">
                 Identificación del Funcionario
               </td>
             </tr>
 
             {/* Fila 4: Nombre */}
             <tr className="border-b border-black">
-              <td className="border-r border-black p-2 font-normal">
+              <td className="border-r border-black p-1.5 font-normal">
                 Nombre
               </td>
-              <td colSpan={4} className="p-2 font-semibold uppercase">
+              <td colSpan={4} className="p-1.5 font-bold uppercase">
                 {nombreFuncionario}
               </td>
             </tr>
 
             {/* Fila 5: Programa o Unidad de trabajo */}
             <tr className="border-b border-black">
-              <td className="border-r border-black p-2 font-normal">
+              <td className="border-r border-black p-1.5 font-normal">
                 Programa o Unidad de trabajo
               </td>
-              <td colSpan={4} className="p-2 font-normal">
+              <td colSpan={4} className="p-1.5 font-normal">
                 {programaUnidad}
               </td>
             </tr>
 
             {/* Fila 6: Categoría funcionaria (A, B, C, D, E, F) */}
             <tr className="border-b border-black">
-              <td className="border-r border-black p-2 font-normal">
+              <td className="border-r border-black p-1.5 font-normal align-middle">
                 Categoría funcionaria
               </td>
               <td colSpan={4} className="p-0">
-                <table className="w-full h-full border-collapse text-center">
+                <table className="w-full h-full border-collapse text-center table-fixed">
                   <tbody>
                     {/* Fila de Letras */}
                     <tr className="border-b border-black">
                       {categorias.map(cat => (
-                        <td key={cat} className="border-r border-black last:border-r-0 py-1.5 font-bold w-1/6">
+                        <td key={cat} className="border-r border-black last:border-r-0 py-1 font-normal w-1/6">
                           {cat}
                         </td>
                       ))}
@@ -193,7 +196,7 @@ const DocumentoOficialMelipilla = ({
                     {/* Fila de Marcas */}
                     <tr>
                       {categorias.map(cat => (
-                        <td key={cat} className="border-r border-black last:border-r-0 py-1.5 h-7 font-black text-sm">
+                        <td key={cat} className="border-r border-black last:border-r-0 py-1 h-6 font-black text-xs">
                           {categoriaSeleccionada === cat ? 'X' : ''}
                         </td>
                       ))}
@@ -205,16 +208,16 @@ const DocumentoOficialMelipilla = ({
 
             {/* Fila 7: Nivel (15 a 1) */}
             <tr className="border-b border-black">
-              <td className="border-r border-black p-2 font-normal">
+              <td className="border-r border-black p-1.5 font-normal align-middle">
                 Nivel
               </td>
               <td colSpan={4} className="p-0">
-                <table className="w-full h-full border-collapse text-center text-xs">
+                <table className="w-full h-full border-collapse text-center text-xs table-fixed">
                   <tbody>
                     {/* Fila de Números 15 a 1 */}
                     <tr className="border-b border-black">
                       {niveles.map(nv => (
-                        <td key={nv} className="border-r border-black last:border-r-0 py-1 font-bold">
+                        <td key={nv} className="border-r border-black last:border-r-0 py-1 font-normal">
                           {nv}
                         </td>
                       ))}
@@ -222,7 +225,7 @@ const DocumentoOficialMelipilla = ({
                     {/* Fila de Marcas */}
                     <tr>
                       {niveles.map(nv => (
-                        <td key={nv} className="border-r border-black last:border-r-0 py-1 h-7 font-black text-xs">
+                        <td key={nv} className="border-r border-black last:border-r-0 py-1 h-6 font-black text-xs">
                           {nivelSeleccionado === nv ? 'X' : ''}
                         </td>
                       ))}
@@ -234,33 +237,33 @@ const DocumentoOficialMelipilla = ({
 
             {/* Fila 8: Separador Control de Asistencia */}
             <tr className="border-b border-black">
-              <td colSpan={5} className="p-2 text-center italic font-semibold">
+              <td colSpan={5} className="p-1 text-center italic font-semibold">
                 Control de Asistencia
               </td>
             </tr>
 
             {/* Fila 9: Puntualidad */}
             <tr className="border-b border-black">
-              <td className="border-r border-black p-2 font-normal">
+              <td className="border-r border-black p-1.5 font-normal">
                 Puntualidad
               </td>
-              <td colSpan={3} className="border-r border-black p-2 font-normal">
+              <td colSpan={3} className="border-r border-black p-1.5 font-normal">
                 Total minutos de atraso
               </td>
-              <td className="p-2 text-center font-bold">
+              <td className="p-1.5 text-center font-bold">
                 {minutosAtraso} <span className="font-normal text-xs ml-1">min</span>
               </td>
             </tr>
 
             {/* Fila 10: Asistencia */}
             <tr>
-              <td className="border-r border-black p-2 font-normal">
+              <td className="border-r border-black p-1.5 font-normal">
                 Asistencia
               </td>
-              <td colSpan={3} className="border-r border-black p-2 font-normal">
+              <td colSpan={3} className="border-r border-black p-1.5 font-normal">
                 Numero de días inasistentes
               </td>
-              <td className="p-2 text-center font-bold">
+              <td className="p-1.5 text-center font-bold">
                 {diasInasistentes}
               </td>
             </tr>
@@ -268,73 +271,75 @@ const DocumentoOficialMelipilla = ({
           </tbody>
         </table>
 
-        {/* Pie de Página 1 (sutil para orientación) */}
-        <div className="mt-8 text-right text-[10px] text-slate-500 font-mono print:hidden">
-          Página 1 de 3 • Formulario de {tipoInforme} Ley 19.378
+        {/* Indicador de Página para vista en pantalla */}
+        <div className="mt-8 text-right text-[10px] text-slate-400 font-mono print:hidden">
+          Página 1 de 3 • Formulario de {tipoInforme}
         </div>
       </div>
 
-      {/* Salto de Página para Impresión A4 */}
+      {/* Salto de Página A4 */}
       <div className="page-break" style={{ pageBreakAfter: 'always', breakAfter: 'page' }}></div>
 
       {/* ══════════════════════════════════════════════════════════════════
           PÁGINA 2: I FACTOR COMPETENCIA (8 ÍTEMS)
       ══════════════════════════════════════════════════════════════════ */}
-      <div className="official-page min-h-[1050px] p-8 md:p-12 border border-slate-300 print:border-none print:p-0 mb-8 print:mb-0 bg-white">
+      <div className="official-page bg-white p-6 md:p-10 border border-slate-300 print:border-none print:p-0 mb-8 print:mb-0">
         
-        <table className="w-full border-collapse border border-black text-xs md:text-sm">
+        <table className="w-full border-collapse border border-black text-xs md:text-[13px] table-fixed">
           <thead>
             {/* Título de la Sección */}
             <tr className="border-b border-black">
-              <th colSpan={5} className="p-2 text-left italic font-bold text-sm tracking-wide">
+              <th colSpan={5} className="p-1.5 text-left italic font-bold text-xs md:text-sm tracking-wide">
                 I Factor competencia
               </th>
             </tr>
           </thead>
           <tbody>
-            {itemsCompetencia.map((item, index) => {
+            {itemsCompetencia.map((item) => {
               const data = factoresCompData[item.id] || { concepto: 'MUY BUENO', comentario: '' };
-              const isLast = index === itemsCompetencia.length - 1;
 
               return (
                 <React.Fragment key={item.id}>
-                  {/* Fila Superior del Ítem: Nombre e Indicadores de Concepto */}
+                  {/* Fila 1: Nombre del Factor a la izquierda (rowSpan=3) + Cabecera de 4 columnas a la derecha */}
                   <tr className="border-t border-black">
-                    {/* Celda del Ítem a la izquierda */}
                     <td 
-                      rowSpan={2} 
-                      className="border-r border-b border-black p-2 font-normal align-top w-2/5"
+                      rowSpan={3} 
+                      className="border-r border-b border-black p-2 font-normal align-top w-[36%]"
                     >
                       {item.letra}) {item.label}
                     </td>
 
-                    {/* Cabeceras de Conceptos */}
-                    {conceptos.map(c => (
-                      <td 
-                        key={c} 
-                        className="border-r border-b border-black last:border-r-0 p-1 text-center font-bold text-[11px] w-[15%]"
-                      >
-                        {c}
-                      </td>
-                    ))}
+                    {/* Cabeceras de Conceptos (Con salto de línea en MUY BUENO) */}
+                    <td className="border-r border-b border-black p-1 text-center font-normal text-[10px] leading-tight w-[16%]">
+                      MUY<br />BUENO
+                    </td>
+                    <td className="border-r border-b border-black p-1 text-center font-normal text-[10px] w-[16%]">
+                      BUENO
+                    </td>
+                    <td className="border-r border-b border-black p-1 text-center font-normal text-[10px] w-[16%]">
+                      REGULAR
+                    </td>
+                    <td className="border-b border-black p-1 text-center font-normal text-[10px] w-[16%]">
+                      MALO
+                    </td>
                   </tr>
 
-                  {/* Fila de Marcas del Ítem */}
+                  {/* Fila 2: Casillas de marcas X */}
                   <tr className="border-b border-black">
-                    {conceptos.map(c => (
+                    {conceptos.map((c, i) => (
                       <td 
                         key={c} 
-                        className="border-r border-b border-black last:border-r-0 p-1 h-6 text-center font-black text-sm"
+                        className={`border-b border-black p-0.5 h-5 text-center font-bold text-xs ${i < 3 ? 'border-r' : ''}`}
                       >
                         {data.concepto === c ? 'X' : ''}
                       </td>
                     ))}
                   </tr>
 
-                  {/* Fila de Comentario */}
-                  <tr className={isLast ? '' : 'border-b border-black'}>
-                    <td colSpan={5} className="p-2 min-h-[38px] align-top text-xs">
-                      <span className="font-medium mr-1">Comentario:</span>
+                  {/* Fila 3: Fila de Comentario que SOLO abarca las 4 columnas de la derecha */}
+                  <tr className="border-b border-black">
+                    <td colSpan={4} className="p-1.5 min-h-[30px] h-8 align-top text-xs">
+                      <span className="font-normal mr-1">Comentario:</span>
                       <span className="font-normal italic text-slate-800">
                         {data.comentario || ''}
                       </span>
@@ -346,74 +351,79 @@ const DocumentoOficialMelipilla = ({
           </tbody>
         </table>
 
-        {/* Pie de Página 2 */}
-        <div className="mt-8 text-right text-[10px] text-slate-500 font-mono print:hidden">
+        {/* Indicador de Página para vista en pantalla */}
+        <div className="mt-8 text-right text-[10px] text-slate-400 font-mono print:hidden">
           Página 2 de 3 • Factor Competencia
         </div>
       </div>
 
-      {/* Salto de Página para Impresión A4 */}
+      {/* Salto de Página A4 */}
       <div className="page-break" style={{ pageBreakAfter: 'always', breakAfter: 'page' }}></div>
 
       {/* ══════════════════════════════════════════════════════════════════
           PÁGINA 3: II FACTOR CONDUCTA FUNCIONARIA Y CUADRO DE FIRMAS
       ══════════════════════════════════════════════════════════════════ */}
-      <div className="official-page min-h-[1050px] p-8 md:p-12 border border-slate-300 print:border-none print:p-0 bg-white flex flex-col justify-between">
+      <div className="official-page bg-white p-6 md:p-10 border border-slate-300 print:border-none print:p-0">
         
         {/* Tabla Factor II: Conducta Funcionaria */}
-        <table className="w-full border-collapse border border-black text-xs md:text-sm">
+        <table className="w-full border-collapse border border-black text-xs md:text-[13px] table-fixed">
           <thead>
             {/* Título de la Sección */}
             <tr className="border-b border-black">
-              <th colSpan={5} className="p-2 text-left italic font-bold text-sm tracking-wide">
+              <th colSpan={5} className="p-1.5 text-left italic font-bold text-xs md:text-sm tracking-wide">
                 II Factor Conducta Funcionaria
               </th>
             </tr>
           </thead>
           <tbody>
-            {itemsConducta.map((item, index) => {
+            {itemsConducta.map((item) => {
               const data = factoresCondData[item.id] || { concepto: 'MUY BUENO', comentario: '' };
-              const isLast = index === itemsConducta.length - 1;
 
               return (
                 <React.Fragment key={item.id}>
-                  {/* Fila Superior del Ítem: Nombre e Indicadores de Concepto */}
+                  {/* Fila 1: Nombre del Factor a la izquierda (rowSpan=3) + Cabecera de 4 columnas a la derecha */}
                   <tr className="border-t border-black">
-                    {/* Celda del Ítem a la izquierda */}
                     <td 
-                      rowSpan={2} 
-                      className="border-r border-b border-black p-2 font-normal align-top w-2/5"
+                      rowSpan={3} 
+                      className="border-r border-b border-black p-2 font-normal align-top w-[36%]"
                     >
                       {item.letra}) {item.label}
                     </td>
 
-                    {/* Cabeceras de Conceptos */}
-                    {conceptos.map(c => (
-                      <td 
-                        key={c} 
-                        className="border-r border-b border-black last:border-r-0 p-1 text-center font-bold text-[11px] w-[15%]"
-                      >
-                        {c}
-                      </td>
-                    ))}
+                    {/* Cabeceras de Conceptos (Con salto de línea en MUY BUENO) */}
+                    <td className="border-r border-b border-black p-1 text-center font-normal text-[10px] leading-tight w-[16%]">
+                      MUY<br />BUENO
+                    </td>
+                    <td className="border-r border-b border-black p-1 text-center font-normal text-[10px] w-[16%]">
+                      BUENO
+                    </td>
+                    <td className="border-r border-b border-black p-1 text-center font-normal text-[10px] w-[16%]">
+                      REGULAR
+                    </td>
+                    <td className="border-b border-black p-1 text-center font-normal text-[10px] w-[16%]">
+                      MALO
+                    </td>
                   </tr>
 
-                  {/* Fila de Marcas del Ítem */}
+                  {/* Fila 2: Casillas de marcas X */}
                   <tr className="border-b border-black">
-                    {conceptos.map(c => (
+                    {conceptos.map((c, i) => (
                       <td 
                         key={c} 
-                        className="border-r border-b border-black last:border-r-0 p-1 h-6 text-center font-black text-sm"
+                        className={`border-b border-black p-0.5 h-5 text-center font-bold text-xs ${i < 3 ? 'border-r' : ''}`}
                       >
                         {data.concepto === c ? 'X' : ''}
                       </td>
                     ))}
                   </tr>
 
-                  {/* Fila de Comentario */}
-                  <tr className={isLast ? '' : 'border-b border-black'}>
-                    <td colSpan={5} className="p-2 min-h-[38px] align-top text-xs">
-                      <span className="font-medium mr-1">Comentario:</span>
+                  {/* Fila 3: Fila de Comentario que SOLO abarca las 4 columnas de la derecha */}
+                  <tr className="border-b border-black">
+                    <td 
+                      colSpan={4} 
+                      className={`p-1.5 align-top text-xs ${item.letra === 'f' ? 'h-14 min-h-[55px]' : 'h-10 min-h-[40px]'}`}
+                    >
+                      <span className="font-normal mr-1">Comentario:</span>
                       <span className="font-normal italic text-slate-800">
                         {data.comentario || ''}
                       </span>
@@ -425,49 +435,49 @@ const DocumentoOficialMelipilla = ({
           </tbody>
         </table>
 
-        {/* Cuadro Oficial de Firmas (Idéntico a la imagen de referencia) */}
-        <div className="mt-12 pt-4">
-          <table className="w-full border-collapse border border-black text-xs md:text-sm">
+        {/* Cuadro Oficial de Firmas (Idéntico a la imagen de referencia Cormumel) */}
+        <div className="mt-8">
+          <table className="w-full border-collapse border border-black text-xs md:text-[13px] table-fixed">
             <tbody>
               
-              {/* Fila 1: Jefe Directo */}
+              {/* Fila 1: Jefe Directo / Firma */}
               <tr className="border-b border-black">
-                <td className="border-r border-black p-3 font-normal w-1/2 align-top h-20">
-                  <div className="font-semibold text-black">Jefe Directo</div>
-                  <div className="text-xs text-slate-700 mt-1">
-                    {evaluacion?.evaluadorNombre || evaluador?.nombre || 'Jefatura Evaluadora'}
+                <td className="border-r border-black p-2.5 font-normal w-1/2 align-top h-16">
+                  <div className="font-normal text-black">Jefe Directo</div>
+                  <div className="text-xs text-slate-800 mt-1">
+                    {evaluacion?.evaluadorNombre || evaluador?.nombre || ''}
                   </div>
-                  <div className="text-[11px] text-slate-500">
-                    {evaluacion?.evaluadorCargo || evaluador?.cargo || 'Dirección Técnica / Jefatura SAR'}
+                  <div className="text-[11px] text-slate-600">
+                    {evaluacion?.evaluadorCargo || evaluador?.cargo || ''}
                   </div>
                 </td>
-                <td className="p-3 font-normal w-1/2 align-top">
-                  <div className="font-semibold text-black">Firma</div>
-                  <div className="h-10"></div>
+                <td className="p-2.5 font-normal w-1/2 align-top">
+                  <div className="font-normal text-black">Firma</div>
                 </td>
               </tr>
 
-              {/* Fila 2: Funcionario */}
+              {/* Fila 2: Funcionario / Firma Funcionario */}
               <tr>
-                <td className="border-r border-black p-3 font-normal align-top h-20">
-                  <div className="font-semibold text-black">{nombreFuncionario}</div>
-                  <div className="text-xs text-slate-600 font-mono mt-0.5">
-                    RUT: {rutFuncionario}
-                  </div>
+                <td className="border-r border-black p-2.5 font-normal w-1/2 align-top h-16">
+                  <div className="font-normal text-black">{nombreFuncionario}</div>
+                  {rutFuncionario && (
+                    <div className="text-xs text-slate-700 font-mono mt-1">
+                      RUT: {rutFuncionario}
+                    </div>
+                  )}
                 </td>
-                <td className="p-3 font-normal align-top">
-                  <div className="font-semibold text-black">Firma Funcionario</div>
-                  <div className="h-10"></div>
+                <td className="p-2.5 font-normal w-1/2 align-top">
+                  <div className="font-normal text-black">Firma Funcionario</div>
                 </td>
               </tr>
 
             </tbody>
           </table>
+        </div>
 
-          {/* Pie de Página 3 */}
-          <div className="mt-4 text-right text-[10px] text-slate-500 font-mono print:hidden">
-            Página 3 de 3 • Conducta Funcionaria y Firmas
-          </div>
+        {/* Indicador de Página para vista en pantalla */}
+        <div className="mt-8 text-right text-[10px] text-slate-400 font-mono print:hidden">
+          Página 3 de 3 • Conducta Funcionaria y Firmas
         </div>
 
       </div>
